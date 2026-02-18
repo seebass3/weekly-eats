@@ -99,3 +99,14 @@ bun run db:migrate
 docker compose up -d postgres
 bun run dev
 ```
+
+## Ingredient Categorization: Expanded Dictionary + Suffix Heuristics
+
+Categorization uses a three-tier code-based approach (no LLM calls — too slow for per-add latency):
+
+1. **Direct match** (~250 entries in `CATEGORY_MAP`) — covers the vast majority of common ingredients
+2. **Suffix heuristics** — rules like `*cheese` → dairy, `*sauce` → pantry, `*berry` → produce
+3. **Contains keyword** — rules like `*chicken*` → meat, `*frozen*` → frozen
+4. **Partial match** — fallback checking if the normalized name contains a known key (min 4 chars, one direction only to avoid false positives)
+
+Depluralization is explicit (pattern-based with an exception list) rather than using a library like `pluralize` to avoid a dependency for a narrow use case. Unit display uses `formatUnit()` for natural pluralization at render time — data is stored in canonical singular form. The synthetic `"unit"` type (used when no specific unit applies) is hidden in the display layer.

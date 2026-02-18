@@ -11,6 +11,7 @@ import {
 import { useDialog } from "@/components/dialog-provider";
 import { useSyncGrocery } from "@/components/sync-provider";
 import { useAnimatedList } from "@/hooks/use-animated-list";
+import { formatItemQuantity } from "@/lib/ingredient-utils";
 
 interface GroceryItem {
   id: string;
@@ -289,7 +290,7 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
                             : "text-muted-foreground"
                         }`}
                       >
-                        {formatQuantity(item.quantity)} {item.unit}
+                        {formatItemQuantity(item.quantity, item.unit)}
                       </span>
                     </div>
                     <button
@@ -310,8 +311,3 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   );
 }
 
-function formatQuantity(q: string): string {
-  const num = parseFloat(q);
-  if (Number.isInteger(num)) return num.toString();
-  return num.toFixed(1);
-}

@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Check, Loader2 } from "lucide-react";
 import { addGroceryItemsAction } from "@/lib/actions";
+import { formatItemQuantity, normalizeUnit } from "@/lib/ingredient-utils";
 
 interface Ingredient {
   item: string;
@@ -103,7 +104,7 @@ export function AddIngredientsToList({
               />
               <span className="flex-1 text-sm capitalize">{ing.item}</span>
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {ing.quantity} {ing.unit}
+                {formatItemQuantity(ing.quantity, normalizeUnit(ing.unit))}
               </span>
             </div>
           </li>
