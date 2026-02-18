@@ -31,3 +31,56 @@ Real-time sync between two users checking off grocery items. SSE is lighter than
 ## Database: Ingredients as JSONB, Grocery Items as Rows
 
 Recipe ingredients are stored as JSONB arrays to match the LLM output format directly. Grocery items are normalized into individual rows because each needs independent check/uncheck state for the shopping experience.
+
+## Tailscale Funnel Setup (Manual)
+
+When ready to expose the app to your partner:
+
+```bash
+# Enable Funnel on port 4400
+tailscale funnel --bg 4400
+
+# Verify it's running
+tailscale funnel status
+
+# The app will be accessible at:
+# https://claudes-computer.<tailnet>.ts.net
+```
+
+To disable Funnel:
+```bash
+tailscale funnel --bg --remove 4400
+```
+
+## macOS LaunchAgent (Auto-Start)
+
+To ensure the app starts on boot, create `~/Library/LaunchAgents/com.weekly-eats.plist`:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.weekly-eats</string>
+    <key>WorkingDirectory</key>
+    <string>/Users/cc/Developer/local-apps/weekly-eats</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/bun</string>
+        <string>run</string>
+        <string>start</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>StandardOutPath</key>
+    <string>/tmp/weekly-eats.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/weekly-eats.error.log</string>
+</dict>
+</plist>
+```
+
+Then load it: `launchctl load ~/Library/LaunchAgents/com.weekly-eats.plist`
