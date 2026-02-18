@@ -8,7 +8,7 @@ const SESSION_SECRET = new TextEncoder().encode(
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login", "/api/cron"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths and static assets
