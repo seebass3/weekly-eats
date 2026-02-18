@@ -3,6 +3,7 @@ import { Geist } from "next/font/google";
 import { BottomNav } from "@/components/bottom-nav";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { InstallPrompt } from "@/components/install-prompt";
+import { GenerationProvider } from "@/components/generation-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,10 +37,12 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} font-sans antialiased`}>
-        <main className="mx-auto min-h-screen max-w-md pb-20 px-4 pt-6">
-          {children}
-        </main>
-        <BottomNav />
+        <GenerationProvider>
+          <main className="mx-auto min-h-screen max-w-md pb-20 px-4 pt-6">
+            {children}
+          </main>
+          <BottomNav />
+        </GenerationProvider>
         <InstallPrompt />
         <ServiceWorkerRegister />
       </body>

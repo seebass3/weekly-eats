@@ -3,7 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Loader2, Sparkles, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  Loader2,
+  Sparkles,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
+import { useGeneration } from "@/components/generation-provider";
 
 interface GenerateButtonProps {
   weekOf?: string;
@@ -11,16 +18,19 @@ interface GenerateButtonProps {
 }
 
 export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
-  const [isGenerating, setIsGenerating] = useState(false);
+  const { generatingWeekOf, startGeneration, endGeneration } = useGeneration();
   const [showContext, setShowContext] = useState(false);
   const [context, setContext] = useState("");
   const router = useRouter();
 
+  const isGenerating = generatingWeekOf === weekOf;
+
   async function handleGenerate() {
-    setIsGenerating(true);
+    if (!weekOf) return;
+    startGeneration(weekOf);
+
     try {
-      const body: Record<string, unknown> = {};
-      if (weekOf) body.weekOf = weekOf;
+      const body: Record<string, unknown> = { weekOf };
       if (isRegenerate) body.force = true;
       if (context.trim()) body.context = context.trim();
 
@@ -37,6 +47,7 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
 
       setContext("");
       setShowContext(false);
+      router.push(`/meals?week=${weekOf}`);
       router.refresh();
     } catch (error) {
       console.error("Generation failed:", error);
@@ -44,7 +55,7 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
         `Failed to generate: ${error instanceof Error ? error.message : "Unknown error"}`
       );
     } finally {
-      setIsGenerating(false);
+      endGeneration();
     }
   }
 
@@ -52,7 +63,7 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
     <div className="space-y-2">
       <Button
         onClick={handleGenerate}
-        disabled={isGenerating}
+        disabled={isGenerating || generatingWeekOf !== null}
         variant={isRegenerate ? "outline" : "default"}
         className="w-full"
         size="lg"
@@ -61,6 +72,11 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             {isRegenerate ? "Regenerating..." : "Generating recipes..."}
+          </>
+        ) : generatingWeekOf !== null ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Generating another week...
           </>
         ) : (
           <>
@@ -73,25 +89,29 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
           </>
         )}
       </Button>
-      <button
-        onClick={() => setShowContext(!showContext)}
-        className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-      >
-        Add context
-        {showContext ? (
-          <ChevronUp className="h-3 w-3" />
-        ) : (
-          <ChevronDown className="h-3 w-3" />
-        )}
-      </button>
-      {showContext && (
-        <textarea
-          value={context}
-          onChange={(e) => setContext(e.target.value)}
-          placeholder='e.g. "We have chicken and broccoli to use up"'
-          className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
-          rows={2}
-        />
+      {!generatingWeekOf && (
+        <>
+          <button
+            onClick={() => setShowContext(!showContext)}
+            className="flex w-full items-center justify-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            Add context
+            {showContext ? (
+              <ChevronUp className="h-3 w-3" />
+            ) : (
+              <ChevronDown className="h-3 w-3" />
+            )}
+          </button>
+          {showContext && (
+            <textarea
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              placeholder='e.g. "We have chicken and broccoli to use up"'
+              className="w-full rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
+              rows={2}
+            />
+          )}
+        </>
       )}
     </div>
   );
