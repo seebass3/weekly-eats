@@ -1,12 +1,12 @@
 # Architectural Decisions
 
-## LLM Model: Mistral over Llama 3.1:8b
+## LLM Model: gemma3:4b
 
-Mistral produces cleaner JSON output with proper decimal quantities (`0.5` vs `1/2`) and no markdown code fence wrapping. We use Ollama's `format: "json"` parameter as a safety net to guarantee valid JSON from any model.
+Switched from Mistral 7B to Google's Gemma 3 4B. Gemma 3 is ~2x faster on Apple Silicon M4 (smaller model, better architecture), produces clean JSON with `format: "json"`, and handles structured output well. Evaluated qwen3:4b but its thinking mode conflicts with JSON-constrained output (empty responses). Gemma 3 4B hits the sweet spot of speed (~75s for 5 full recipes) and quality.
 
-## Recipe Generation: 5 Separate LLM Calls
+## Recipe Generation: Batch All 5 in One LLM Call
 
-Rather than generating all 5 recipes in a single prompt, we make one call per weeknight dinner. This produces higher quality output from 7B parameter models and allows individual retry on failure. Each call includes the already-generated recipes for that week to avoid intra-week duplication.
+All 5 weeknight recipes are generated in a single LLM call using `buildWeekPlanPrompt()` + `WeekPlanSchema`. This is ~2x faster than 5 sequential calls. The vegetarian/meat split (Mon/Wed vegetarian, Tue/Thu/Fri meat) is enforced per-recipe in the prompt. Single recipe swaps still use individual calls via `regenerateSingleRecipe()` for fast ~15s swaps.
 
 ## Grocery Deduplication: Code-First, LLM-Fallback
 
@@ -27,6 +27,22 @@ Using `app/manifest.ts` and a manual `public/sw.js` service worker. No third-par
 ## Grocery List Sync: Server-Sent Events (SSE)
 
 Real-time sync between two users checking off grocery items. SSE is lighter than WebSockets and works with native `EventSource` in browsers. No extra dependencies needed.
+
+## Mutations: Server Actions with updateTag
+
+Quick mutations (toggle/remove/clear grocery items, toggle favorites) use server actions (`src/lib/actions.ts`) with `updateTag()` for immediate cache invalidation. Long-running operations (generate week, swap recipe) stay as API route handlers with `revalidateTag(tag, { expire: 0 })` since they need client-side loading state management. SSE handles cross-tab real-time sync for grocery operations.
+
+## Caching: Next.js 16 use cache + cacheComponents
+
+Read queries use `"use cache"` directive with `cacheTag()` for automatic server-side caching. `cacheComponents: true` in next.config.ts enables component-level caching. Server actions call `updateTag()` to invalidate, route handlers call `revalidateTag()`. Dynamic client components (`usePathname`, etc.) are wrapped in `<Suspense>` boundaries as required by cacheComponents mode.
+
+## Date Handling: Local Timezone
+
+Week dates use local timezone formatting (`getFullYear/getMonth/getDate`) instead of `toISOString()` which uses UTC. In Vancouver (UTC-8), Monday evening local time is Tuesday in UTC, causing week starts to land on Tuesdays. Shared utilities in `src/lib/dates.ts`.
+
+## Diet Split: Vegetarian Mon/Wed, Meat Tue/Thu/Fri
+
+2 vegetarian + 3 meat meals per week. Enforced in the batch prompt with explicit per-recipe constraints rather than a general instruction, since smaller models (4B) sometimes ignore general dietary rules.
 
 ## Database: Ingredients as JSONB, Grocery Items as Rows
 
