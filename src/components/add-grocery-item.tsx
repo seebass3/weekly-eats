@@ -2,10 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Plus, Loader2 } from "lucide-react";
-
-interface AddGroceryItemProps {
-  onAdded?: () => void;
-}
+import { addGroceryItemsAction } from "@/lib/actions";
 
 /**
  * Parses input like "2 lbs chicken breast" or "chicken breast" into
@@ -46,7 +43,7 @@ function parseInput(raw: string): {
   return { item: trimmed, quantity: 1, unit: "unit" };
 }
 
-export function AddGroceryItem({ onAdded }: AddGroceryItemProps) {
+export function AddGroceryItem() {
   const [input, setInput] = useState("");
   const [isAdding, setIsAdding] = useState(false);
 
@@ -56,23 +53,14 @@ export function AddGroceryItem({ onAdded }: AddGroceryItemProps) {
 
     setIsAdding(true);
 
-    try {
-      const res = await fetch("/api/grocery/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [parsed] }),
-      });
+    const result = await addGroceryItemsAction([parsed]);
 
-      if (res.ok) {
-        setInput("");
-        onAdded?.();
-      }
-    } catch {
-      // silently fail — item just won't appear
-    } finally {
-      setIsAdding(false);
+    if (!("error" in result)) {
+      setInput("");
     }
-  }, [input, onAdded]);
+
+    setIsAdding(false);
+  }, [input]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

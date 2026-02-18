@@ -1,7 +1,5 @@
 import { subscribeToGroceryEvents } from "@/lib/grocery-events";
 
-export const dynamic = "force-dynamic";
-
 export async function GET() {
   const encoder = new TextEncoder();
 

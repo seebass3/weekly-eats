@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
+import { toggleFavoriteAction } from "@/lib/actions";
 
 interface FavoriteButtonProps {
   recipeId: string;
@@ -12,19 +12,12 @@ interface FavoriteButtonProps {
 export function FavoriteButton({ recipeId, isFavorite }: FavoriteButtonProps) {
   const [favorite, setFavorite] = useState(isFavorite);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
 
   async function handleToggle() {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/recipes/${recipeId}/favorite`, {
-        method: "POST",
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setFavorite(data.isFavorite);
-        router.refresh();
-      }
+      const result = await toggleFavoriteAction(recipeId);
+      setFavorite(result.isFavorite);
     } finally {
       setIsLoading(false);
     }

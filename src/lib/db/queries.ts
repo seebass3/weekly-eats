@@ -14,6 +14,7 @@ import {
   CATEGORY_ORDER,
 } from "@/lib/ingredient-utils";
 import { getCurrentWeekMonday } from "@/lib/dates";
+import { cacheTag } from "next/cache";
 
 export async function getCurrentMealPlan() {
   const weekOf = getCurrentWeekMonday();
@@ -21,6 +22,9 @@ export async function getCurrentMealPlan() {
 }
 
 export async function getMealPlanByWeek(weekOf: string) {
+  "use cache";
+  cacheTag("meals", `meals-${weekOf}`);
+
   const [plan] = await db
     .select()
     .from(mealPlans)
@@ -39,6 +43,9 @@ export async function getMealPlanByWeek(weekOf: string) {
 }
 
 export async function getRecipeById(id: string) {
+  "use cache";
+  cacheTag("meals", `recipe-${id}`);
+
   const [recipe] = await db
     .select()
     .from(recipes)
@@ -58,6 +65,9 @@ export async function getRecipeById(id: string) {
 }
 
 export async function getGroceryListForWeek(weekOf?: string) {
+  "use cache";
+  cacheTag("grocery");
+
   const targetWeek = weekOf ?? getCurrentWeekMonday();
 
   const [list] = await db
@@ -237,6 +247,9 @@ export async function toggleFavorite(recipeId: string) {
 }
 
 export async function getFavorites() {
+  "use cache";
+  cacheTag("favorites");
+
   const favorites = await db
     .select({
       savedRecipe: savedRecipes,
@@ -255,6 +268,9 @@ export async function getFavorites() {
 }
 
 export async function getWeeksList() {
+  "use cache";
+  cacheTag("meals");
+
   const weeks = await db
     .select({ weekOf: mealPlans.weekOf, id: mealPlans.id })
     .from(mealPlans)
@@ -265,6 +281,9 @@ export async function getWeeksList() {
 }
 
 export async function getMostRecentMealPlan() {
+  "use cache";
+  cacheTag("meals");
+
   const [plan] = await db
     .select()
     .from(mealPlans)

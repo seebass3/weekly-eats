@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { generateWeeklyPlan } from "@/lib/ollama/generate-plan";
 
 export const maxDuration = 300;
@@ -27,6 +28,9 @@ export async function POST(request: Request) {
         { status: 200 }
       );
     }
+
+    revalidateTag("meals", { expire: 0 });
+    revalidateTag("grocery", { expire: 0 });
 
     return NextResponse.json(
       { message: "Meal plan generated successfully", ...result },

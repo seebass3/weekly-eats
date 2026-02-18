@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { regenerateSingleRecipe } from "@/lib/ollama/generate-plan";
 
 export const maxDuration = 120;
@@ -17,6 +18,10 @@ export async function POST(
     console.log(`Regenerating recipe ${id}${body.context ? ` with context: ${body.context}` : ""}`);
 
     const updated = await regenerateSingleRecipe(id, body.context);
+
+    revalidateTag("meals", { expire: 0 });
+    revalidateTag(`recipe-${id}`, { expire: 0 });
+    revalidateTag("grocery", { expire: 0 });
 
     return NextResponse.json({
       message: "Recipe regenerated successfully",

@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Check, Loader2 } from "lucide-react";
+import { addGroceryItemsAction } from "@/lib/actions";
 
 interface Ingredient {
   item: string;
@@ -54,28 +55,19 @@ export function AddIngredientsToList({
 
     const items = Array.from(selected).map((i) => ingredients[i]);
 
-    try {
-      const res = await fetch("/api/grocery/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
-      });
+    const result = await addGroceryItemsAction(items);
 
-      if (res.ok) {
-        const data = (await res.json()) as { added: number; merged: number };
-        const parts: string[] = [];
-        if (data.added > 0) parts.push(`${data.added} added`);
-        if (data.merged > 0) parts.push(`${data.merged} merged`);
-        setFeedback(parts.join(", "));
-        setSelected(new Set());
-      } else {
-        setFeedback("Failed to add items");
-      }
-    } catch {
+    if ("error" in result) {
       setFeedback("Failed to add items");
-    } finally {
-      setIsAdding(false);
+    } else {
+      const parts: string[] = [];
+      if (result.added > 0) parts.push(`${result.added} added`);
+      if (result.merged > 0) parts.push(`${result.merged} merged`);
+      setFeedback(parts.join(", "));
+      setSelected(new Set());
     }
+
+    setIsAdding(false);
   }, [selected, ingredients]);
 
   return (

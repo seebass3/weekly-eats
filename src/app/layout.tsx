@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { Suspense } from "react";
 import { Geist } from "next/font/google";
 import { BottomNav } from "@/components/bottom-nav";
 import { ServiceWorkerRegister } from "@/components/sw-register";
@@ -38,10 +39,12 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} font-sans antialiased`}>
         <GenerationProvider>
-          <main className="mx-auto min-h-screen max-w-md pb-20 px-4 pt-6">
-            {children}
-          </main>
-          <BottomNav />
+          <Suspense>
+            <main className="mx-auto min-h-screen max-w-md pb-20 px-4 pt-6">
+              {children}
+            </main>
+            <BottomNav />
+          </Suspense>
         </GenerationProvider>
         <InstallPrompt />
         <ServiceWorkerRegister />

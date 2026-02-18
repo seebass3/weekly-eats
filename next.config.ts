@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  cacheComponents: true,
   allowedDevOrigins: ["claudes-computer"],
   async headers() {
     return [

@@ -3,6 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ShoppingBasket, Trash2 } from "lucide-react";
+import {
+  toggleGroceryItemAction,
+  removeGroceryItemAction,
+  clearGroceryListAction,
+} from "@/lib/actions";
 import type { GroceryItemPayload } from "@/lib/grocery-events";
 
 interface GroceryItem {
@@ -45,7 +50,12 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   const [items, setItems] = useState(initialItems);
   const removedItemRef = useRef<GroceryItem | null>(null);
 
-  // SSE subscription for real-time updates
+  // Sync from server when cached data is revalidated
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
+
+  // SSE subscription for real-time cross-tab updates
   useEffect(() => {
     const eventSource = new EventSource("/api/grocery/events");
 
@@ -83,16 +93,8 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
       )
     );
 
-    try {
-      const res = await fetch(`/api/grocery/${id}`, { method: "PATCH" });
-      if (!res.ok) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === id ? { ...item, checked: !item.checked } : item
-          )
-        );
-      }
-    } catch {
+    const result = await toggleGroceryItemAction(id);
+    if ("error" in result) {
       setItems((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, checked: !item.checked } : item
@@ -108,15 +110,8 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     removedItemRef.current = itemToRemove;
     setItems((prev) => prev.filter((item) => item.id !== id));
 
-    try {
-      const res = await fetch(`/api/grocery/${id}`, { method: "DELETE" });
-      if (!res.ok) {
-        // Restore on failure
-        if (removedItemRef.current) {
-          setItems((prev) => [...prev, removedItemRef.current!].sort((a, b) => a.sortOrder - b.sortOrder));
-        }
-      }
-    } catch {
+    const result = await removeGroceryItemAction(id);
+    if ("error" in result) {
       if (removedItemRef.current) {
         setItems((prev) => [...prev, removedItemRef.current!].sort((a, b) => a.sortOrder - b.sortOrder));
       }
@@ -130,16 +125,8 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     const previousItems = items;
     setItems([]);
 
-    try {
-      const res = await fetch("/api/grocery/clear", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) {
-        setItems(previousItems);
-      }
-    } catch {
+    const result = await clearGroceryListAction();
+    if ("error" in result) {
       setItems(previousItems);
     }
   }, [items]);
