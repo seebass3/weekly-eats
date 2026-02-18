@@ -9,6 +9,29 @@ import { Clock, ChevronRight, RefreshCw, Loader2 } from "lucide-react";
 const DAY_NAMES = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 const DAY_SHORT = ["", "MON", "TUE", "WED", "THU", "FRI"];
 
+export function MealCardSkeleton({ dayOfWeek }: { dayOfWeek: number }) {
+  return (
+    <div className="flex gap-3 rounded-xl border bg-card p-3.5">
+      <div className="flex w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 py-2">
+        <span className="text-[10px] font-bold tracking-wider text-primary">
+          {DAY_SHORT[dayOfWeek]}
+        </span>
+      </div>
+      <div className="min-w-0 flex-1 space-y-2.5">
+        <div className="space-y-1.5">
+          <div className="h-3 w-16 animate-pulse rounded bg-muted" />
+          <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="h-4 w-full animate-pulse rounded bg-muted/60" />
+        <div className="flex items-center gap-2">
+          <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
+          <div className="h-4 w-14 animate-pulse rounded bg-muted/60" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface MealCardProps {
   id: string;
   name: string;
@@ -62,34 +85,8 @@ export function MealCard({
     }
   }
 
-  if (isSwapping) {
-    return (
-      <div className="flex gap-3 rounded-xl border bg-card p-3.5">
-        {dayOfWeek && (
-          <div className="flex w-11 shrink-0 flex-col items-center justify-center rounded-lg bg-primary/10 py-2">
-            <span className="text-[10px] font-bold tracking-wider text-primary">
-              {DAY_SHORT[dayOfWeek]}
-            </span>
-          </div>
-        )}
-        <div className="min-w-0 flex-1 space-y-2.5">
-          <div className="space-y-1.5">
-            {dayOfWeek && (
-              <div className="h-3 w-16 animate-pulse rounded bg-muted" />
-            )}
-            <div className="h-5 w-3/4 animate-pulse rounded bg-muted" />
-          </div>
-          <div className="h-4 w-full animate-pulse rounded bg-muted/60" />
-          <div className="flex items-center gap-2">
-            <div className="h-5 w-16 animate-pulse rounded-full bg-muted" />
-            <div className="h-4 w-14 animate-pulse rounded bg-muted/60" />
-          </div>
-        </div>
-        <div className="flex items-center">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-        </div>
-      </div>
-    );
+  if (isSwapping && dayOfWeek) {
+    return <MealCardSkeleton dayOfWeek={dayOfWeek} />;
   }
 
   return (
