@@ -237,9 +237,12 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
                     i !== categoryItems.length - 1 ? "border-b" : ""
                   } ${item.checked ? "bg-muted/30" : ""}`}
                 >
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={() => handleToggle(item.id)}
-                    className={`flex flex-1 items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(item.id); } }}
+                    className={`flex flex-1 cursor-pointer items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
                       item.checked ? "" : "hover:bg-accent/40"
                     }`}
                   >
@@ -266,7 +269,7 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
                     >
                       {formatQuantity(item.quantity)} {item.unit}
                     </span>
-                  </button>
+                  </div>
                   <button
                     onClick={() => handleRemove(item.id)}
                     className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-40 transition-all hover:bg-destructive/10 hover:opacity-100"

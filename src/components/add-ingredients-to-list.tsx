@@ -95,9 +95,12 @@ export function AddIngredientsToList({
       <ul className="space-y-1">
         {ingredients.map((ing, i) => (
           <li key={i}>
-            <button
+            <div
+              role="button"
+              tabIndex={0}
               onClick={() => toggleItem(i)}
-              className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleItem(i); } }}
+              className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
                 selected.has(i) ? "bg-primary/5" : "hover:bg-accent/40"
               }`}
             >
@@ -110,7 +113,7 @@ export function AddIngredientsToList({
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                 {ing.quantity} {ing.unit}
               </span>
-            </button>
+            </div>
           </li>
         ))}
       </ul>
