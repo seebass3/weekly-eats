@@ -3,15 +3,7 @@ import { MealCard } from "@/components/meal-card";
 import { WeekNav } from "@/components/week-nav";
 import { GenerateButton } from "@/components/generate-button";
 import { UtensilsCrossed } from "lucide-react";
-
-function getCurrentWeekMonday(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split("T")[0];
-}
+import { getCurrentWeekMonday } from "@/lib/dates";
 
 export default async function MealsPage({
   searchParams,

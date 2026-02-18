@@ -15,15 +15,7 @@ import {
 } from "./prompts";
 import { RecipeSchema, type GeneratedRecipe } from "./schema";
 import { generateGroceryList } from "./generate-grocery";
-
-function getNextMonday(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const daysUntilMonday = day === 0 ? 1 : 8 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + daysUntilMonday);
-  return monday.toISOString().split("T")[0];
-}
+import { getCurrentWeekMonday, getNextMonday } from "@/lib/dates";
 
 async function getRecentRecipeNames(weeksBack: number): Promise<string[]> {
   const cutoff = new Date();
