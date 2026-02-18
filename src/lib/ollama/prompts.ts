@@ -28,6 +28,59 @@ Vary the prep and cook times realistically based on the dish. A stir-fry might b
 
 Always respond with valid JSON matching the exact schema requested. Do not include any text outside the JSON object.`;
 
+export function buildWeekPlanPrompt(options: {
+  recentWeeksRecipes: string[];
+  favoriteNames: string[];
+  context?: string;
+}): string {
+  const { recentWeeksRecipes, favoriteNames, context } = options;
+  const season = MONTH_SEASONS[new Date().getMonth()];
+
+  let prompt = `Generate 5 weeknight dinner recipes for Monday through Friday. It is currently ${season}, so favor seasonal ingredients where appropriate.
+
+IMPORTANT diet rules:
+- Recipe 1 (Monday): MUST be VEGETARIAN — absolutely NO meat, chicken, fish, seafood, or poultry. Use plant proteins, eggs, cheese, or dairy instead.
+- Recipe 2 (Tuesday): MUST include meat, poultry, or fish.
+- Recipe 3 (Wednesday): MUST be VEGETARIAN — absolutely NO meat, chicken, fish, seafood, or poultry. Use plant proteins, eggs, cheese, or dairy instead.
+- Recipe 4 (Thursday): MUST include meat, poultry, or fish.
+- Recipe 5 (Friday): MUST include meat, poultry, or fish.
+
+Each recipe must be unique — different cuisines, proteins, and cooking styles. Include variety (e.g. Italian, Mexican, Asian, American, Mediterranean, Indian).`;
+
+  if (context) {
+    prompt += `\n\nAdditional context from the household: "${context}"`;
+  }
+
+  if (recentWeeksRecipes.length > 0) {
+    prompt += `\n\nRecipes from recent weeks (do NOT repeat):\n${recentWeeksRecipes.map((r) => `- ${r}`).join("\n")}`;
+  }
+
+  if (favoriteNames.length > 0) {
+    const picked =
+      favoriteNames[Math.floor(Math.random() * favoriteNames.length)];
+    prompt += `\n\nThe household has a favorite recipe called "${picked}". You may include a variation of it if it fits well this week, but it is not required.`;
+  }
+
+  prompt += `\n\nRespond with a JSON object containing a "recipes" array of exactly 5 recipe objects in order (Monday first, Friday last):
+{
+  "recipes": [
+    {
+      "name": "string",
+      "cuisine": "string",
+      "cook_time_minutes": number,
+      "prep_time_minutes": number,
+      "servings": 4,
+      "description": "string - one sentence",
+      "ingredients": [{ "item": "string", "quantity": number, "unit": "string" }],
+      "steps": ["step 1", "step 2"],
+      "tags": ["tag1", "tag2"]
+    }
+  ]
+}`;
+
+  return prompt;
+}
+
 export function buildRecipePrompt(options: {
   dayIndex: number;
   previousRecipes: string[];

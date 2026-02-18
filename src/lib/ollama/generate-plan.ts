@@ -4,18 +4,21 @@ import {
   recipes,
   savedRecipes,
   groceryLists,
-  groceryItems,
 } from "@/lib/db/schema";
 import { desc, eq, gte, sql } from "drizzle-orm";
 import { generateJSON } from "./client";
 import {
   SYSTEM_PROMPT,
-  buildRecipePrompt,
+  buildWeekPlanPrompt,
   buildSingleRecipePrompt,
 } from "./prompts";
-import { RecipeSchema, type GeneratedRecipe } from "./schema";
+import {
+  RecipeSchema,
+  WeekPlanSchema,
+  type GeneratedRecipe,
+} from "./schema";
 import { generateGroceryList } from "./generate-grocery";
-import { getCurrentWeekMonday, getNextMonday } from "@/lib/dates";
+import { getNextMonday } from "@/lib/dates";
 
 async function getRecentRecipeNames(weeksBack: number): Promise<string[]> {
   const cutoff = new Date();
@@ -39,44 +42,6 @@ async function getFavoriteNames(): Promise<string[]> {
     .limit(20);
 
   return favorites.map((r) => r.name);
-}
-
-async function generateSingleRecipe(
-  dayIndex: number,
-  previousRecipes: string[],
-  recentWeeksRecipes: string[],
-  favoriteNames: string[],
-  context?: string,
-  maxRetries: number = 2
-): Promise<GeneratedRecipe> {
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      const raw = await generateJSON<unknown>({
-        system: SYSTEM_PROMPT,
-        prompt: buildRecipePrompt({
-          dayIndex,
-          previousRecipes,
-          recentWeeksRecipes,
-          favoriteNames,
-          context,
-        }),
-      });
-
-      return RecipeSchema.parse(raw);
-    } catch (error) {
-      if (attempt === maxRetries) {
-        throw new Error(
-          `Failed to generate recipe for day ${dayIndex + 1} after ${maxRetries + 1} attempts: ${error}`
-        );
-      }
-      console.warn(
-        `Recipe generation attempt ${attempt + 1} failed, retrying...`,
-        error
-      );
-    }
-  }
-
-  throw new Error("Unreachable");
 }
 
 async function deleteMealPlanForWeek(weekOf: string) {
@@ -118,19 +83,41 @@ export async function generateWeeklyPlan(options?: {
   const recentWeeksRecipes = await getRecentRecipeNames(3);
   const favoriteNames = await getFavoriteNames();
 
-  // Generate 5 recipes sequentially
-  const generatedRecipes: GeneratedRecipe[] = [];
-  for (let i = 0; i < 5; i++) {
-    const recipe = await generateSingleRecipe(
-      i,
-      generatedRecipes.map((r) => r.name),
-      recentWeeksRecipes,
-      favoriteNames,
-      context
-    );
-    generatedRecipes.push(recipe);
-    console.log(`Generated recipe ${i + 1}/5: ${recipe.name}`);
+  // Generate all 5 recipes in a single LLM call
+  let generatedRecipes: GeneratedRecipe[] | null = null;
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    try {
+      const raw = await generateJSON<unknown>({
+        system: SYSTEM_PROMPT,
+        prompt: buildWeekPlanPrompt({
+          recentWeeksRecipes,
+          favoriteNames,
+          context,
+        }),
+        timeoutMs: 180_000,
+      });
+
+      const parsed = WeekPlanSchema.parse(raw);
+      generatedRecipes = parsed.recipes;
+      break;
+    } catch (error) {
+      if (attempt === 2) {
+        throw new Error(
+          `Failed to generate week plan after 3 attempts: ${error}`
+        );
+      }
+      console.warn(
+        `Week plan generation attempt ${attempt + 1} failed, retrying...`,
+        error
+      );
+    }
   }
+
+  if (!generatedRecipes) throw new Error("Unreachable");
+
+  console.log(
+    `Generated 5 recipes: ${generatedRecipes.map((r) => r.name).join(", ")}`
+  );
 
   // Insert meal plan and recipes
   const [mealPlan] = await db

@@ -1,6 +1,6 @@
 const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "mistral:latest";
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma3:4b";
 
 interface OllamaGenerateOptions {
   prompt: string;
@@ -35,7 +35,7 @@ export async function generateJSON<T>(
         stream: false,
         options: {
           temperature: 0.8,
-          num_predict: 2048,
+          num_predict: 4096,
         },
       }),
       signal: controller.signal,

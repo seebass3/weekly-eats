@@ -21,3 +21,9 @@ export const RecipeSchema = z.object({
 });
 
 export type GeneratedRecipe = z.infer<typeof RecipeSchema>;
+
+export const WeekPlanSchema = z.object({
+  recipes: z.array(RecipeSchema).length(5),
+});
+
+export type GeneratedWeekPlan = z.infer<typeof WeekPlanSchema>;
