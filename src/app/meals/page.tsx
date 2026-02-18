@@ -46,6 +46,7 @@ export default async function MealsPage({
                 cookTimeMinutes={recipe.cookTimeMinutes}
                 prepTimeMinutes={recipe.prepTimeMinutes}
                 description={recipe.description}
+                canSwap
               />
             ))}
           </div>
