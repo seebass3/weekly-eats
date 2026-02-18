@@ -11,7 +11,6 @@ import {
   normalizeItemName,
   normalizeUnit,
   categorizeItem,
-  CATEGORY_ORDER,
 } from "@/lib/ingredient-utils";
 import { getCurrentWeekMonday } from "@/lib/dates";
 import { cacheTag } from "next/cache";
@@ -265,19 +264,6 @@ export async function getFavorites() {
     timesUsed: f.savedRecipe.timesUsed,
     lastUsedAt: f.savedRecipe.lastUsedAt,
   }));
-}
-
-export async function getWeeksList() {
-  "use cache";
-  cacheTag("meals");
-
-  const weeks = await db
-    .select({ weekOf: mealPlans.weekOf, id: mealPlans.id })
-    .from(mealPlans)
-    .orderBy(desc(mealPlans.weekOf))
-    .limit(12);
-
-  return weeks;
 }
 
 export async function getMostRecentMealPlan() {

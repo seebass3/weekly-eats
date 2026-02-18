@@ -1,7 +1,7 @@
 // Shared ingredient normalization and categorization utilities
 // Used by both grocery list generation (Ollama) and manual add-to-list
 
-export const CATEGORY_MAP: Record<string, string> = {
+const CATEGORY_MAP: Record<string, string> = {
   // Produce
   onion: "produce",
   garlic: "produce",

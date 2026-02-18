@@ -1,6 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
-import { hashSync, compareSync } from "bcryptjs";
 
 const SESSION_SECRET = new TextEncoder().encode(
   process.env.SESSION_SECRET || "fallback-secret-change-me"
@@ -44,12 +43,4 @@ export function getSessionCookieConfig(token: string) {
     maxAge: COOKIE_MAX_AGE,
     path: "/",
   };
-}
-
-export function hashPassword(password: string): string {
-  return hashSync(password, 10);
-}
-
-export function verifyPassword(password: string, hash: string): boolean {
-  return compareSync(password, hash);
 }
