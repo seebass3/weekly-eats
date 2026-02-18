@@ -42,20 +42,25 @@ export default async function MealsPage({
       <WeekNav weekOf={plan?.weekOf ?? weekOf} />
 
       {plan && plan.recipes.length > 0 ? (
-        <div className="space-y-2.5">
-          {plan.recipes.map((recipe) => (
-            <MealCard
-              key={recipe.id}
-              id={recipe.id}
-              name={recipe.name}
-              cuisine={recipe.cuisine}
-              dayOfWeek={recipe.dayOfWeek}
-              cookTimeMinutes={recipe.cookTimeMinutes}
-              prepTimeMinutes={recipe.prepTimeMinutes}
-              description={recipe.description}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2.5">
+            {plan.recipes.map((recipe) => (
+              <MealCard
+                key={recipe.id}
+                id={recipe.id}
+                name={recipe.name}
+                cuisine={recipe.cuisine}
+                dayOfWeek={recipe.dayOfWeek}
+                cookTimeMinutes={recipe.cookTimeMinutes}
+                prepTimeMinutes={recipe.prepTimeMinutes}
+                description={recipe.description}
+              />
+            ))}
+          </div>
+          <div className="px-4">
+            <GenerateButton weekOf={weekOf} isRegenerate />
+          </div>
+        </>
       ) : (
         <div className="flex flex-col items-center gap-5 rounded-xl border border-dashed py-16 text-center">
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">

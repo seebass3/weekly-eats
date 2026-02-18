@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Clock, Users, Flame } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
 import { BackButton } from "@/components/back-button";
+import { AddIngredientsToList } from "@/components/add-ingredients-to-list";
 
 export default async function RecipePage({
   params,
@@ -71,24 +72,7 @@ export default async function RecipePage({
         </div>
       </div>
 
-      <div className="rounded-xl bg-muted/40 p-4">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-          Ingredients
-        </h2>
-        <ul className="space-y-2.5">
-          {ingredients.map((ing, i) => (
-            <li
-              key={i}
-              className="flex items-baseline justify-between gap-2 text-sm"
-            >
-              <span className="capitalize">{ing.item}</span>
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                {ing.quantity} {ing.unit}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <AddIngredientsToList ingredients={ingredients} />
 
       <div>
         <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">

@@ -7,13 +7,19 @@ export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => ({}))) as {
       weekOf?: string;
+      force?: boolean;
+      context?: string;
     };
 
     console.log(
-      `Starting meal plan generation for week of: ${body.weekOf ?? "next Monday"}`
+      `Starting meal plan generation for week of: ${body.weekOf ?? "next Monday"}${body.force ? " (force regenerate)" : ""}`
     );
 
-    const result = await generateWeeklyPlan(body.weekOf);
+    const result = await generateWeeklyPlan({
+      weekOf: body.weekOf,
+      force: body.force,
+      context: body.context,
+    });
 
     if (result.alreadyExisted) {
       return NextResponse.json(

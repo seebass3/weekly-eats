@@ -20,13 +20,15 @@ export const mealPlans = pgTable("meal_plans", {
 
 export const recipes = pgTable("recipes", {
   id: uuid().primaryKey().defaultRandom(),
-  mealPlanId: uuid("meal_plan_id").references(() => mealPlans.id),
+  mealPlanId: uuid("meal_plan_id").references(() => mealPlans.id, {
+    onDelete: "cascade",
+  }),
   name: text().notNull(),
   cuisine: text().notNull(),
   dayOfWeek: smallint("day_of_week"),
   cookTimeMinutes: integer("cook_time_minutes").notNull(),
   prepTimeMinutes: integer("prep_time_minutes"),
-  servings: integer().notNull().default(2),
+  servings: integer().notNull().default(4),
   description: text(),
   ingredients: jsonb()
     .notNull()
@@ -42,7 +44,7 @@ export const savedRecipes = pgTable("saved_recipes", {
   recipeId: uuid("recipe_id")
     .notNull()
     .unique()
-    .references(() => recipes.id),
+    .references(() => recipes.id, { onDelete: "cascade" }),
   savedAt: timestamp("saved_at").notNull().defaultNow(),
   notes: text(),
   timesUsed: integer("times_used").notNull().default(0),
@@ -52,9 +54,9 @@ export const savedRecipes = pgTable("saved_recipes", {
 export const groceryLists = pgTable("grocery_lists", {
   id: uuid().primaryKey().defaultRandom(),
   mealPlanId: uuid("meal_plan_id")
-    .notNull()
     .unique()
-    .references(() => mealPlans.id),
+    .references(() => mealPlans.id, { onDelete: "cascade" }),
+  weekOf: date("week_of").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -62,7 +64,7 @@ export const groceryItems = pgTable("grocery_items", {
   id: uuid().primaryKey().defaultRandom(),
   groceryListId: uuid("grocery_list_id")
     .notNull()
-    .references(() => groceryLists.id),
+    .references(() => groceryLists.id, { onDelete: "cascade" }),
   item: text().notNull(),
   quantity: numeric().notNull(),
   unit: text().notNull(),

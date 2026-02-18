@@ -7,6 +7,12 @@ import {
   groceryItems,
 } from "./schema";
 import { eq, desc, sql } from "drizzle-orm";
+import {
+  normalizeItemName,
+  normalizeUnit,
+  categorizeItem,
+  CATEGORY_ORDER,
+} from "@/lib/ingredient-utils";
 
 function getCurrentWeekMonday(): string {
   const now = new Date();
@@ -62,18 +68,10 @@ export async function getRecipeById(id: string) {
 export async function getGroceryListForWeek(weekOf?: string) {
   const targetWeek = weekOf ?? getCurrentWeekMonday();
 
-  const [plan] = await db
-    .select()
-    .from(mealPlans)
-    .where(eq(mealPlans.weekOf, targetWeek))
-    .limit(1);
-
-  if (!plan) return null;
-
   const [list] = await db
     .select()
     .from(groceryLists)
-    .where(eq(groceryLists.mealPlanId, plan.id))
+    .where(eq(groceryLists.weekOf, targetWeek))
     .limit(1);
 
   if (!list) return null;
@@ -85,6 +83,125 @@ export async function getGroceryListForWeek(weekOf?: string) {
     .orderBy(groceryItems.sortOrder);
 
   return { ...list, items, weekOf: targetWeek };
+}
+
+export async function getOrCreateGroceryList(weekOf?: string) {
+  const targetWeek = weekOf ?? getCurrentWeekMonday();
+
+  const [existing] = await db
+    .select()
+    .from(groceryLists)
+    .where(eq(groceryLists.weekOf, targetWeek))
+    .limit(1);
+
+  if (existing) return existing;
+
+  // Check if there's a meal plan for this week to link
+  const [plan] = await db
+    .select({ id: mealPlans.id })
+    .from(mealPlans)
+    .where(eq(mealPlans.weekOf, targetWeek))
+    .limit(1);
+
+  const [created] = await db
+    .insert(groceryLists)
+    .values({
+      mealPlanId: plan?.id ?? null,
+      weekOf: targetWeek,
+    })
+    .returning();
+
+  return created;
+}
+
+export async function addItemsToGroceryList(
+  groceryListId: string,
+  newItems: { item: string; quantity: number; unit: string }[]
+) {
+  // Fetch existing items for dedup
+  const existingItems = await db
+    .select()
+    .from(groceryItems)
+    .where(eq(groceryItems.groceryListId, groceryListId));
+
+  // Build lookup map: normalizedName|normalizedUnit -> existing item
+  const existingMap = new Map<string, (typeof existingItems)[number]>();
+  for (const item of existingItems) {
+    const key = `${normalizeItemName(item.item)}|${item.unit}`;
+    existingMap.set(key, item);
+  }
+
+  const toInsert: {
+    item: string;
+    quantity: string;
+    unit: string;
+    category: string;
+    sortOrder: number;
+  }[] = [];
+  let mergedCount = 0;
+  const maxSortOrder = existingItems.reduce(
+    (max, i) => Math.max(max, i.sortOrder),
+    -1
+  );
+
+  for (const newItem of newItems) {
+    const normalizedName = normalizeItemName(newItem.item);
+    const normalizedUnitVal = normalizeUnit(newItem.unit);
+    const key = `${normalizedName}|${normalizedUnitVal}`;
+
+    const existing = existingMap.get(key);
+    if (existing) {
+      // Merge: add quantities
+      const newQty = parseFloat(existing.quantity) + newItem.quantity;
+      await db
+        .update(groceryItems)
+        .set({ quantity: newQty.toString() })
+        .where(eq(groceryItems.id, existing.id));
+      mergedCount++;
+    } else {
+      const category = categorizeItem(newItem.item) ?? "other";
+      toInsert.push({
+        item: normalizedName,
+        quantity: newItem.quantity.toString(),
+        unit: normalizedUnitVal,
+        category,
+        sortOrder: maxSortOrder + 1 + toInsert.length,
+      });
+    }
+  }
+
+  let inserted: (typeof groceryItems.$inferSelect)[] = [];
+  if (toInsert.length > 0) {
+    inserted = await db
+      .insert(groceryItems)
+      .values(
+        toInsert.map((item) => ({
+          groceryListId,
+          ...item,
+        }))
+      )
+      .returning();
+  }
+
+  return { inserted, mergedCount };
+}
+
+export async function removeGroceryItem(id: string) {
+  const [deleted] = await db
+    .delete(groceryItems)
+    .where(eq(groceryItems.id, id))
+    .returning();
+
+  return deleted ?? null;
+}
+
+export async function clearGroceryList(groceryListId: string) {
+  const result = await db
+    .delete(groceryItems)
+    .where(eq(groceryItems.groceryListId, groceryListId))
+    .returning({ id: groceryItems.id });
+
+  return result.length;
 }
 
 export async function toggleGroceryItem(id: string) {

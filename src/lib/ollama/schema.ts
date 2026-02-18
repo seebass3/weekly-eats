@@ -5,7 +5,7 @@ export const RecipeSchema = z.object({
   cuisine: z.string().min(1),
   cook_time_minutes: z.number().int().positive(),
   prep_time_minutes: z.number().int().nonnegative().optional().default(0),
-  servings: z.number().int().positive().default(2),
+  servings: z.number().int().positive().default(4),
   description: z.string().optional().default(""),
   ingredients: z
     .array(

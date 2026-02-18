@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingBasket } from "lucide-react";
+import { ShoppingBasket, Trash2 } from "lucide-react";
+import type { GroceryItemPayload } from "@/lib/grocery-events";
 
 interface GroceryItem {
   id: string;
@@ -30,36 +31,45 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  produce: "🥬",
-  meat: "🥩",
-  dairy: "🥚",
-  bakery: "🍞",
-  frozen: "🧊",
-  pantry: "🫙",
-  spices: "🧂",
-  other: "📦",
+  produce: "\u{1F96C}",
+  meat: "\u{1F969}",
+  dairy: "\u{1F95A}",
+  bakery: "\u{1F35E}",
+  frozen: "\u{1F9CA}",
+  pantry: "\u{1FAD9}",
+  spices: "\u{1F9C2}",
+  other: "\u{1F4E6}",
 };
 
 export function GroceryListView({ initialItems }: GroceryListViewProps) {
   const [items, setItems] = useState(initialItems);
+  const removedItemRef = useRef<GroceryItem | null>(null);
 
   // SSE subscription for real-time updates
   useEffect(() => {
     const eventSource = new EventSource("/api/grocery/events");
 
     eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data) as {
-        type: string;
-        itemId: string;
-        checked: boolean;
-      };
+      const data = JSON.parse(event.data) as
+        | { type: "toggle"; itemId: string; checked: boolean }
+        | { type: "add"; items: GroceryItemPayload[] }
+        | { type: "remove"; itemId: string }
+        | { type: "clear" };
 
       if (data.type === "toggle") {
         setItems((prev) =>
           prev.map((item) =>
-            item.id === data.itemId ? { ...item, checked: data.checked } : item
+            item.id === data.itemId
+              ? { ...item, checked: data.checked }
+              : item
           )
         );
+      } else if (data.type === "add") {
+        setItems((prev) => [...prev, ...data.items]);
+      } else if (data.type === "remove") {
+        setItems((prev) => prev.filter((item) => item.id !== data.itemId));
+      } else if (data.type === "clear") {
+        setItems([]);
       }
     };
 
@@ -67,7 +77,6 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   }, []);
 
   const handleToggle = useCallback(async (id: string) => {
-    // Optimistic update
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, checked: !item.checked } : item
@@ -92,9 +101,53 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     }
   }, []);
 
+  const handleRemove = useCallback(async (id: string) => {
+    const itemToRemove = items.find((i) => i.id === id);
+    if (!itemToRemove) return;
+
+    removedItemRef.current = itemToRemove;
+    setItems((prev) => prev.filter((item) => item.id !== id));
+
+    try {
+      const res = await fetch(`/api/grocery/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        // Restore on failure
+        if (removedItemRef.current) {
+          setItems((prev) => [...prev, removedItemRef.current!].sort((a, b) => a.sortOrder - b.sortOrder));
+        }
+      }
+    } catch {
+      if (removedItemRef.current) {
+        setItems((prev) => [...prev, removedItemRef.current!].sort((a, b) => a.sortOrder - b.sortOrder));
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  const handleClear = useCallback(async () => {
+    if (!window.confirm("Clear all items from the grocery list?")) return;
+
+    const previousItems = items;
+    setItems([]);
+
+    try {
+      const res = await fetch("/api/grocery/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) {
+        setItems(previousItems);
+      }
+    } catch {
+      setItems(previousItems);
+    }
+  }, [items]);
+
   const checkedCount = items.filter((i) => i.checked).length;
   const totalCount = items.length;
-  const percentage = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
+  const percentage =
+    totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
 
   // Group by category
   const grouped = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
@@ -115,6 +168,10 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     "other",
   ];
 
+  if (totalCount === 0) {
+    return null;
+  }
+
   return (
     <div className="space-y-5">
       {/* Progress card */}
@@ -126,9 +183,18 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
               {checkedCount} of {totalCount} items
             </span>
           </div>
-          <span className="text-sm font-semibold tabular-nums">
-            {percentage}%
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-semibold tabular-nums">
+              {percentage}%
+            </span>
+            <button
+              onClick={handleClear}
+              className="flex items-center gap-1 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3" />
+              Clear
+            </button>
+          </div>
         </div>
         <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-background">
           <div
@@ -151,48 +217,64 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
               <span className="text-sm">{CATEGORY_EMOJI[category]}</span>
               <h3
                 className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
-                  allChecked ? "text-muted-foreground/50" : "text-muted-foreground"
+                  allChecked
+                    ? "text-muted-foreground/50"
+                    : "text-muted-foreground"
                 }`}
               >
                 {CATEGORY_LABELS[category] ?? category}
               </h3>
               <span className="text-[11px] text-muted-foreground/60">
-                {categoryItems.filter((i) => i.checked).length}/{categoryItems.length}
+                {categoryItems.filter((i) => i.checked).length}/
+                {categoryItems.length}
               </span>
             </div>
             <div className="space-y-0.5 rounded-lg border bg-card">
               {categoryItems.map((item, i) => (
-                <button
+                <div
                   key={item.id}
-                  onClick={() => handleToggle(item.id)}
-                  className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
+                  className={`group flex items-center ${
                     i !== categoryItems.length - 1 ? "border-b" : ""
-                  } ${item.checked ? "bg-muted/30" : "hover:bg-accent/40"}`}
+                  } ${item.checked ? "bg-muted/30" : ""}`}
                 >
-                  <Checkbox
-                    checked={item.checked}
-                    tabIndex={-1}
-                    className="transition-all"
-                  />
-                  <span
-                    className={`flex-1 text-sm capitalize transition-all ${
-                      item.checked
-                        ? "text-muted-foreground line-through"
-                        : "text-foreground"
+                  <button
+                    onClick={() => handleToggle(item.id)}
+                    className={`flex flex-1 items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
+                      item.checked ? "" : "hover:bg-accent/40"
                     }`}
                   >
-                    {item.item}
-                  </span>
-                  <span
-                    className={`shrink-0 text-xs tabular-nums transition-all ${
-                      item.checked
-                        ? "text-muted-foreground/40"
-                        : "text-muted-foreground"
-                    }`}
+                    <Checkbox
+                      checked={item.checked}
+                      tabIndex={-1}
+                      className="transition-all"
+                    />
+                    <span
+                      className={`flex-1 text-sm capitalize transition-all ${
+                        item.checked
+                          ? "text-muted-foreground line-through"
+                          : "text-foreground"
+                      }`}
+                    >
+                      {item.item}
+                    </span>
+                    <span
+                      className={`shrink-0 text-xs tabular-nums transition-all ${
+                        item.checked
+                          ? "text-muted-foreground/40"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {formatQuantity(item.quantity)} {item.unit}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleRemove(item.id)}
+                    className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-40 transition-all hover:bg-destructive/10 hover:opacity-100"
+                    aria-label={`Remove ${item.item}`}
                   >
-                    {formatQuantity(item.quantity)} {item.unit}
-                  </span>
-                </button>
+                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                  </button>
+                </div>
               ))}
             </div>
           </div>

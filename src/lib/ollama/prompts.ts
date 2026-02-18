@@ -15,9 +15,12 @@ const MONTH_SEASONS: Record<number, string> = {
   11: "winter",
 };
 
+// Days 0,2 (Mon, Wed) are vegetarian; days 1,3,4 (Tue, Thu, Fri) include meat
+const VEGETARIAN_DAYS = new Set([0, 2]);
+
 export const SYSTEM_PROMPT = `You are a practical home cooking assistant. You generate weeknight dinner recipes that are:
 - Ready in under 45 minutes total (prep + cook)
-- Serve 2 people
+- Serve 4 people (generous portions for leftovers)
 - Use commonly available ingredients
 - Clear, precise measurements using decimal numbers (e.g. 0.5, not 1/2)
 
@@ -28,13 +31,30 @@ export function buildRecipePrompt(options: {
   previousRecipes: string[];
   recentWeeksRecipes: string[];
   favoriteNames: string[];
+  context?: string;
 }): string {
-  const { dayIndex, previousRecipes, recentWeeksRecipes, favoriteNames } =
-    options;
+  const {
+    dayIndex,
+    previousRecipes,
+    recentWeeksRecipes,
+    favoriteNames,
+    context,
+  } = options;
   const day = DAYS[dayIndex];
   const season = MONTH_SEASONS[new Date().getMonth()];
+  const isVegetarian = VEGETARIAN_DAYS.has(dayIndex);
 
-  let prompt = `Generate a dinner recipe for ${day} night. It is currently ${season}, so favor seasonal ingredients where appropriate.`;
+  let prompt = `Generate a ${isVegetarian ? "vegetarian" : "dinner"} recipe for ${day} night. It is currently ${season}, so favor seasonal ingredients where appropriate.`;
+
+  if (isVegetarian) {
+    prompt += `\n\nThis MUST be a vegetarian recipe — no meat, poultry, or fish. Eggs and dairy are fine.`;
+  } else {
+    prompt += `\n\nThis should include meat, poultry, or fish as a main protein.`;
+  }
+
+  if (context) {
+    prompt += `\n\nAdditional context from the household: "${context}"`;
+  }
 
   if (previousRecipes.length > 0) {
     prompt += `\n\nRecipes already planned this week (do NOT repeat these or use very similar dishes):\n${previousRecipes.map((r) => `- ${r}`).join("\n")}`;
@@ -58,7 +78,71 @@ Respond with a JSON object matching this exact schema:
   "cuisine": "string - cuisine type",
   "cook_time_minutes": number,
   "prep_time_minutes": number,
-  "servings": 2,
+  "servings": 4,
+  "description": "string - one sentence description",
+  "ingredients": [
+    { "item": "string", "quantity": number, "unit": "string" }
+  ],
+  "steps": ["string - step 1", "string - step 2", ...],
+  "tags": ["string - tag1", "string - tag2"]
+}`;
+
+  return prompt;
+}
+
+export function buildSingleRecipePrompt(options: {
+  dayIndex: number;
+  otherRecipes: string[];
+  recentWeeksRecipes: string[];
+  favoriteNames: string[];
+  context?: string;
+}): string {
+  const {
+    dayIndex,
+    otherRecipes,
+    recentWeeksRecipes,
+    favoriteNames,
+    context,
+  } = options;
+  const day = DAYS[dayIndex];
+  const season = MONTH_SEASONS[new Date().getMonth()];
+  const isVegetarian = VEGETARIAN_DAYS.has(dayIndex);
+
+  let prompt = `Generate a replacement ${isVegetarian ? "vegetarian" : "dinner"} recipe for ${day} night. It is currently ${season}, so favor seasonal ingredients where appropriate.`;
+
+  if (isVegetarian) {
+    prompt += `\n\nThis MUST be a vegetarian recipe — no meat, poultry, or fish. Eggs and dairy are fine.`;
+  } else {
+    prompt += `\n\nThis should include meat, poultry, or fish as a main protein.`;
+  }
+
+  if (context) {
+    prompt += `\n\nAdditional context from the household: "${context}"`;
+  }
+
+  if (otherRecipes.length > 0) {
+    prompt += `\n\nOther recipes already planned this week (do NOT repeat these or use very similar dishes):\n${otherRecipes.map((r) => `- ${r}`).join("\n")}`;
+  }
+
+  if (recentWeeksRecipes.length > 0) {
+    prompt += `\n\nRecipes from recent weeks (avoid repeating):\n${recentWeeksRecipes.map((r) => `- ${r}`).join("\n")}`;
+  }
+
+  if (favoriteNames.length > 0) {
+    const picked =
+      favoriteNames[Math.floor(Math.random() * favoriteNames.length)];
+    prompt += `\n\nThe household has a favorite recipe called "${picked}". You may include a variation of it if it fits well this week, but it is not required.`;
+  }
+
+  prompt += `\n\nInclude variety in cuisine type (e.g. Italian, Mexican, Asian, American, Mediterranean, Indian).
+
+Respond with a JSON object matching this exact schema:
+{
+  "name": "string - the recipe name",
+  "cuisine": "string - cuisine type",
+  "cook_time_minutes": number,
+  "prep_time_minutes": number,
+  "servings": 4,
   "description": "string - one sentence description",
   "ingredients": [
     { "item": "string", "quantity": number, "unit": "string" }
