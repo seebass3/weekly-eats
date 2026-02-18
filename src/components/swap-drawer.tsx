@@ -28,7 +28,7 @@ interface SwapDrawerProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   favorites: FavoriteRecipe[];
-  onGenerateNew: () => void;
+  onGenerateNew: (context?: string) => void;
 }
 
 export function SwapDrawer({
@@ -39,6 +39,7 @@ export function SwapDrawer({
   onGenerateNew,
 }: SwapDrawerProps) {
   const [isReplacing, setIsReplacing] = useState<string | null>(null);
+  const [context, setContext] = useState("");
   const router = useRouter();
   const { alert } = useDialog();
 
@@ -71,8 +72,10 @@ export function SwapDrawer({
   }
 
   function handleGenerateNew() {
+    const trimmed = context.trim() || undefined;
     onOpenChange(false);
-    onGenerateNew();
+    setContext("");
+    onGenerateNew(trimmed);
   }
 
   return (
@@ -131,7 +134,20 @@ export function SwapDrawer({
               </div>
             )}
 
-            <div className={favorites.length > 0 ? "mt-4" : ""}>
+            <div className={favorites.length > 0 ? "mt-4 space-y-2" : "space-y-2"}>
+              <input
+                type="text"
+                value={context}
+                onChange={(e) => setContext(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isReplacing) {
+                    e.preventDefault();
+                    handleGenerateNew();
+                  }
+                }}
+                placeholder='e.g. "use up lemons" or "something quick"'
+                className="w-full rounded-lg border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary/20"
+              />
               <Button
                 variant="outline"
                 className="w-full"

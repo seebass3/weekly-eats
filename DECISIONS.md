@@ -68,6 +68,10 @@ To disable Funnel:
 tailscale funnel --bg --remove 4400
 ```
 
+## Drag-and-Drop Reorder: @dnd-kit with Day Swap
+
+Recipe cards on the meals page can be dragged to reorder which day each recipe is assigned to. Dragging swaps the `dayOfWeek` values of the two recipes — no `sortOrder` column needed since each recipe has a unique weekday slot. Uses `@dnd-kit/core` + `@dnd-kit/sortable` (chosen for React 19 compatibility; `react-beautiful-dnd` is archived). A `GripVertical` handle on the left of each card initiates drag, avoiding conflicts with the card's Link navigation and swap button. `TouchSensor` uses a 200ms activation delay to prevent conflicts with scrolling. `restrictToVerticalAxis` modifier keeps drag constrained. Optimistic UI updates local state immediately with rollback on server error.
+
 ## Docker Containerization
 
 The app runs in a Docker container for production instead of bare `bun run start`. Multi-stage Dockerfile: `oven/bun:1-alpine` for dependency install and build, `node:22-alpine` for runtime (standalone output produces a Node.js server script). The container runs as a non-root `nextjs` user.

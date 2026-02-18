@@ -1,8 +1,10 @@
+import { connection } from "next/server";
 import { getFavorites } from "@/lib/db/queries";
 import { MealCard } from "@/components/meal-card";
 import { Heart } from "lucide-react";
 
 export default async function FavoritesPage() {
+  await connection();
   const favorites = await getFavorites();
 
   return (

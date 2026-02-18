@@ -61,22 +61,7 @@ Each recipe must be unique — different cuisines, proteins, and cooking styles.
     prompt += `\n\nThe household has a favorite recipe called "${picked}". You may include a variation of it if it fits well this week, but it is not required.`;
   }
 
-  prompt += `\n\nRespond with a JSON object containing a "recipes" array of exactly 5 recipe objects in order (Monday first, Friday last):
-{
-  "recipes": [
-    {
-      "name": "string",
-      "cuisine": "string",
-      "cook_time_minutes": number,
-      "prep_time_minutes": number,
-      "servings": 4,
-      "description": "string - one sentence",
-      "ingredients": [{ "item": "string", "quantity": number, "unit": "string" }],
-      "steps": ["step 1", "step 2"],
-      "tags": ["tag1", "tag2"]
-    }
-  ]
-}`;
+  prompt += `\n\nRespond with a JSON object with one key called recipes whose value is an array of exactly 5 recipe objects in order Monday first and Friday last. Each recipe object must have these keys: name (string), cuisine (string), cook_time_minutes (integer), prep_time_minutes (integer), servings (integer, always 4), description (one sentence string), ingredients (array of objects each with item, quantity, and unit keys), steps (array of instruction strings), tags (array of tag strings).`;
 
   return prompt;
 }
@@ -127,20 +112,7 @@ export function buildSingleRecipePrompt(options: {
 
   prompt += `\n\nInclude variety in cuisine type (e.g. Italian, Mexican, Asian, American, Mediterranean, Indian).
 
-Respond with a JSON object matching this exact schema:
-{
-  "name": "string - the recipe name",
-  "cuisine": "string - cuisine type",
-  "cook_time_minutes": number,
-  "prep_time_minutes": number,
-  "servings": 4,
-  "description": "string - one sentence description",
-  "ingredients": [
-    { "item": "string", "quantity": number, "unit": "string" }
-  ],
-  "steps": ["string - step 1", "string - step 2", ...],
-  "tags": ["string - tag1", "string - tag2"]
-}`;
+Respond with a single JSON object with these keys: name (string), cuisine (string), cook_time_minutes (integer), prep_time_minutes (integer), servings (integer, always 4), description (one sentence string), ingredients (array of objects each with item/quantity/unit keys), steps (array of instruction strings), tags (array of tag strings).`;
 
   return prompt;
 }
@@ -155,9 +127,5 @@ ${uncategorizedItems.map((item) => `- ${item}`).join("\n")}
 
 Categories: produce, meat, dairy, pantry, spices, frozen, bakery, other
 
-Respond with a JSON object where keys are the item names and values are the category:
-{
-  "item name": "category",
-  ...
-}`;
+Respond with a JSON object where each key is the item name (string) and each value is the category (string).`;
 }

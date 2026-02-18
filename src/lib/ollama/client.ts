@@ -2,11 +2,15 @@ const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL || "http://localhost:11434";
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || "gemma3:4b";
 
+type JsonSchema = Record<string, unknown>;
+
 interface OllamaGenerateOptions {
   prompt: string;
   system?: string;
   model?: string;
   timeoutMs?: number;
+  maxTokens?: number;
+  schema?: JsonSchema;
 }
 
 interface OllamaResponse {
@@ -18,7 +22,14 @@ interface OllamaResponse {
 export async function generateJSON<T>(
   options: OllamaGenerateOptions
 ): Promise<T> {
-  const { prompt, system, model = OLLAMA_MODEL, timeoutMs = 120_000 } = options;
+  const {
+    prompt,
+    system,
+    model = OLLAMA_MODEL,
+    timeoutMs = 120_000,
+    maxTokens = 4096,
+    schema,
+  } = options;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -31,11 +42,12 @@ export async function generateJSON<T>(
         model,
         prompt,
         system,
-        format: "json",
+        format: schema ?? "json",
         stream: false,
+        keep_alive: "10m",
         options: {
           temperature: 0.8,
-          num_predict: 4096,
+          num_predict: maxTokens,
         },
       }),
       signal: controller.signal,

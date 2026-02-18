@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import { addGroceryItemsAction } from "@/lib/actions";
 
@@ -46,6 +46,7 @@ function parseInput(raw: string): {
 export function AddGroceryItem() {
   const [input, setInput] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = useCallback(async () => {
     const parsed = parseInput(input);
@@ -75,13 +76,13 @@ export function AddGroceryItem() {
   return (
     <div className="flex gap-2">
       <input
+        ref={inputRef}
         type="text"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder='Add item, e.g. "2 lbs chicken"'
         className="flex-1 rounded-lg border bg-background px-3 py-2.5 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/20"
-        disabled={isAdding}
       />
       <button
         onClick={handleAdd}

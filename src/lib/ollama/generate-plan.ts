@@ -14,6 +14,54 @@ import {
 } from "./schema";
 import { getNextMonday } from "@/lib/dates";
 
+const RECIPE_JSON_SCHEMA = {
+  type: "object",
+  required: [
+    "name",
+    "cuisine",
+    "cook_time_minutes",
+    "prep_time_minutes",
+    "servings",
+    "description",
+    "ingredients",
+    "steps",
+    "tags",
+  ],
+  properties: {
+    name: { type: "string" },
+    cuisine: { type: "string" },
+    cook_time_minutes: { type: "integer" },
+    prep_time_minutes: { type: "integer" },
+    servings: { type: "integer" },
+    description: { type: "string" },
+    ingredients: {
+      type: "array",
+      items: {
+        type: "object",
+        required: ["item", "quantity", "unit"],
+        properties: {
+          item: { type: "string" },
+          quantity: { type: "number" },
+          unit: { type: "string" },
+        },
+      },
+    },
+    steps: { type: "array", items: { type: "string" } },
+    tags: { type: "array", items: { type: "string" } },
+  },
+} as const;
+
+const WEEK_PLAN_JSON_SCHEMA = {
+  type: "object",
+  required: ["recipes"],
+  properties: {
+    recipes: {
+      type: "array",
+      items: RECIPE_JSON_SCHEMA,
+    },
+  },
+} as const;
+
 async function getRecentRecipeNames(weeksBack: number): Promise<string[]> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - weeksBack * 7);
@@ -89,6 +137,8 @@ export async function generateWeeklyPlan(options?: {
           context,
         }),
         timeoutMs: 180_000,
+        maxTokens: 4096,
+        schema: WEEK_PLAN_JSON_SCHEMA,
       });
 
       const parsed = WeekPlanSchema.parse(raw);
@@ -194,6 +244,8 @@ export async function regenerateSingleRecipe(
           favoriteNames,
           context,
         }),
+        maxTokens: 1024,
+        schema: RECIPE_JSON_SCHEMA,
       });
       newRecipe = RecipeSchema.parse(raw);
       break;

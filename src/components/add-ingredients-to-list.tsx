@@ -133,7 +133,7 @@ export function AddIngredientsToList({
             </Button>
           )}
           {feedback && (
-            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <span className="animate-in fade-in slide-in-from-bottom-1 duration-300 flex items-center gap-1 text-xs text-muted-foreground">
               <Check className="h-3.5 w-3.5 text-green-500" />
               {feedback}
             </span>

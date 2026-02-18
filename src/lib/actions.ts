@@ -63,9 +63,7 @@ export async function addGroceryItemsAction(
     items
   );
 
-  if (inserted.length > 0) {
-    emitSyncEvent({ type: "grocery:add", items: inserted });
-  }
+  emitSyncEvent({ type: "grocery:add", items: inserted });
 
   updateTag("grocery");
   return { added: inserted.length, merged: mergedCount };
@@ -142,6 +140,43 @@ export async function replaceWithFavoriteAction(
   updateTag(`recipe-${recipeId}`);
 
   return { success: true as const, recipe: updated };
+}
+
+export async function swapRecipeDaysAction(
+  recipeIdA: string,
+  recipeIdB: string
+) {
+  const [recipeA] = await db
+    .select({ id: recipes.id, dayOfWeek: recipes.dayOfWeek })
+    .from(recipes)
+    .where(eq(recipes.id, recipeIdA))
+    .limit(1);
+
+  const [recipeB] = await db
+    .select({ id: recipes.id, dayOfWeek: recipes.dayOfWeek })
+    .from(recipes)
+    .where(eq(recipes.id, recipeIdB))
+    .limit(1);
+
+  if (!recipeA || !recipeB) return { error: "Recipe not found" as const };
+  if (recipeA.dayOfWeek === null || recipeB.dayOfWeek === null) {
+    return { error: "Recipe has no day assignment" as const };
+  }
+
+  await db
+    .update(recipes)
+    .set({ dayOfWeek: recipeB.dayOfWeek })
+    .where(eq(recipes.id, recipeIdA));
+
+  await db
+    .update(recipes)
+    .set({ dayOfWeek: recipeA.dayOfWeek })
+    .where(eq(recipes.id, recipeIdB));
+
+  emitSyncEvent({ type: "meals:updated" });
+  updateTag("meals");
+
+  return { success: true as const };
 }
 
 export async function toggleFavoriteAction(recipeId: string) {

@@ -83,7 +83,7 @@ export function MealCard({
     setDrawerOpen(true);
   }
 
-  async function handleGenerateNew() {
+  async function handleGenerateNew(context?: string) {
     setIsSwapping(true);
     emitSwapStart(id);
 
@@ -91,7 +91,7 @@ export function MealCard({
       const res = await fetch(`/api/recipes/${id}/regenerate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ context }),
       });
 
       if (!res.ok) {

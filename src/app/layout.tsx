@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Suspense } from "react";
 import { DM_Sans, DM_Serif_Display } from "next/font/google";
 import { BottomNav } from "@/components/bottom-nav";
+import { getGroceryListForWeek } from "@/lib/db/queries";
 import { ServiceWorkerRegister } from "@/components/sw-register";
 import { InstallPrompt } from "@/components/install-prompt";
 import { GenerationProvider } from "@/components/generation-provider";
@@ -41,11 +42,14 @@ export const viewport: Viewport = {
   themeColor: "#2c2418",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const groceryList = await getGroceryListForWeek();
+  const groceryCount = groceryList?.items.filter((i) => !i.checked).length ?? 0;
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${dmSans.variable} ${dmSerifDisplay.variable} font-sans antialiased`}>
@@ -57,7 +61,7 @@ export default function RootLayout({
                   <main className="mx-auto min-h-screen max-w-md pb-20 px-4 pt-6">
                     {children}
                   </main>
-                  <BottomNav />
+                  <BottomNav groceryCount={groceryCount} />
                 </SyncProvider>
               </Suspense>
             </GenerationProvider>

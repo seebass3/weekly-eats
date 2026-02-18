@@ -46,6 +46,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   );
   const groceryListenersRef = useRef(new Set<SyncEventHandler>());
 
+  // Use refs for all callbacks to keep the EventSource effect stable.
+  // Without refs, router/startGeneration/endGeneration in the dependency
+  // array cause the EventSource to tear down and reconnect on every
+  // navigation (especially with cacheComponents), losing events.
+  const routerRef = useRef(router);
+  routerRef.current = router;
+  const startGenerationRef = useRef(startGeneration);
+  startGenerationRef.current = startGeneration;
+  const endGenerationRef = useRef(endGeneration);
+  endGenerationRef.current = endGeneration;
+
   const subscribeGrocery = useCallback((handler: SyncEventHandler) => {
     groceryListenersRef.current.add(handler);
     return () => {
@@ -63,11 +74,15 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         for (const listener of groceryListenersRef.current) {
           listener(event);
         }
+        // Also refresh the server component so the page can switch
+        // between the empty state and the list view when items are
+        // added to an empty list or the list is cleared.
+        routerRef.current.refresh();
       } else if (event.type === "generation:start") {
-        startGeneration(event.weekOf);
+        startGenerationRef.current(event.weekOf);
       } else if (event.type === "generation:end") {
-        endGeneration();
-        router.refresh();
+        endGenerationRef.current();
+        routerRef.current.refresh();
       } else if (event.type === "swap:start") {
         setSwappingRecipeIds((prev) => new Set(prev).add(event.recipeId));
       } else if (event.type === "swap:end") {
@@ -76,15 +91,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
           next.delete(event.recipeId);
           return next;
         });
-        router.refresh();
+        routerRef.current.refresh();
       } else {
         // meals:updated, favorites:updated
-        router.refresh();
+        routerRef.current.refresh();
       }
     };
 
     return () => eventSource.close();
-  }, [router, startGeneration, endGeneration]);
+    // Empty deps — refs keep callbacks current without reconnecting
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SyncContext value={{ subscribeGrocery, swappingRecipeIds }}>

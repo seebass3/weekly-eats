@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ShoppingBasket, Trash2 } from "lucide-react";
+import { ShoppingBasket, ShoppingCart, Trash2 } from "lucide-react";
 import {
   toggleGroceryItemAction,
   removeGroceryItemAction,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/actions";
 import { useDialog } from "@/components/dialog-provider";
 import { useSyncGrocery } from "@/components/sync-provider";
+import { useAnimatedList } from "@/hooks/use-animated-list";
 
 interface GroceryItem {
   id: string;
@@ -47,10 +48,19 @@ const CATEGORY_EMOJI: Record<string, string> = {
   other: "\u{1F4E6}",
 };
 
+const getItemKey = (item: GroceryItem) => item.id;
+
 export function GroceryListView({ initialItems }: GroceryListViewProps) {
   const [items, setItems] = useState(initialItems);
   const removedItemRef = useRef<GroceryItem | null>(null);
   const { confirm } = useDialog();
+
+  const animatedItems = useAnimatedList({
+    items,
+    getKey: getItemKey,
+    enterDuration: 300,
+    exitDuration: 250,
+  });
 
   // Sync from server when cached data is revalidated
   useEffect(() => {
@@ -133,11 +143,11 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   const percentage =
     totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
 
-  // Group by category
-  const grouped = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
-    const cat = item.category;
+  // Group animated items by category
+  const grouped = animatedItems.reduce<Record<string, typeof animatedItems>>((acc, animated) => {
+    const cat = animated.item.category;
     if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(item);
+    acc[cat].push(animated);
     return acc;
   }, {});
 
@@ -152,8 +162,20 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     "other",
   ];
 
-  if (totalCount === 0) {
-    return null;
+  if (totalCount === 0 && animatedItems.length === 0) {
+    return (
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+          <ShoppingCart className="h-6 w-6 text-primary/60" />
+        </div>
+        <div>
+          <p className="font-medium">No items yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Add items above or from a recipe page
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -190,13 +212,18 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
 
       {/* Category groups */}
       {categoryOrder.map((category) => {
-        const categoryItems = grouped[category];
-        if (!categoryItems || categoryItems.length === 0) return null;
+        const categoryAnimatedItems = grouped[category];
+        if (!categoryAnimatedItems || categoryAnimatedItems.length === 0) return null;
 
-        const allChecked = categoryItems.every((i) => i.checked);
+        const nonExitingItems = categoryAnimatedItems.filter((a) => !a.exiting);
+        const allChecked = nonExitingItems.length > 0 && nonExitingItems.every((a) => a.item.checked);
+        const isNewCategory = nonExitingItems.length > 0 && nonExitingItems.every((a) => a.entering);
 
         return (
-          <div key={category}>
+          <div
+            key={category}
+            className={isNewCategory ? "animate-in fade-in slide-in-from-bottom-1 duration-300" : ""}
+          >
             <div className="mb-1.5 flex items-center gap-2 px-1">
               <span className="text-sm">{CATEGORY_EMOJI[category]}</span>
               <h3
@@ -209,60 +236,72 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
                 {CATEGORY_LABELS[category] ?? category}
               </h3>
               <span className="text-[11px] text-muted-foreground/60">
-                {categoryItems.filter((i) => i.checked).length}/
-                {categoryItems.length}
+                {nonExitingItems.filter((a) => a.item.checked).length}/
+                {nonExitingItems.length}
               </span>
             </div>
             <div className="space-y-0.5 rounded-lg border bg-card">
-              {categoryItems.map((item, i) => (
-                <div
-                  key={item.id}
-                  className={`group flex items-center ${
-                    i !== categoryItems.length - 1 ? "border-b" : ""
-                  } ${item.checked ? "bg-muted/30" : ""}`}
-                >
+              {categoryAnimatedItems.map((animated, i) => {
+                const { item, entering, exiting } = animated;
+                return (
                   <div
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleToggle(item.id)}
-                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(item.id); } }}
-                    className={`flex flex-1 cursor-pointer items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
-                      item.checked ? "" : "hover:bg-accent/40"
+                    key={item.id}
+                    className={`group flex items-center ${
+                      i !== categoryAnimatedItems.length - 1 ? "border-b" : ""
+                    } ${item.checked ? "bg-muted/30" : ""} ${
+                      entering
+                        ? "animate-in fade-in slide-in-from-left-2 duration-300 ease-out fill-mode-backwards"
+                        : ""
+                    } ${
+                      exiting
+                        ? "animate-[grocery-item-exit_250ms_ease-out_forwards] pointer-events-none overflow-hidden"
+                        : ""
                     }`}
+                    style={exiting ? { maxHeight: "60px" } : undefined}
                   >
-                    <Checkbox
-                      checked={item.checked}
-                      tabIndex={-1}
-                      className="transition-all"
-                    />
-                    <span
-                      className={`flex-1 text-sm capitalize transition-all ${
-                        item.checked
-                          ? "text-muted-foreground line-through"
-                          : "text-foreground"
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleToggle(item.id)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleToggle(item.id); } }}
+                      className={`flex flex-1 cursor-pointer items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
+                        item.checked ? "" : "hover:bg-accent/40"
                       }`}
                     >
-                      {item.item}
-                    </span>
-                    <span
-                      className={`shrink-0 text-xs tabular-nums transition-all ${
-                        item.checked
-                          ? "text-muted-foreground/40"
-                          : "text-muted-foreground"
-                      }`}
+                      <Checkbox
+                        checked={item.checked}
+                        tabIndex={-1}
+                        className="transition-all"
+                      />
+                      <span
+                        className={`flex-1 text-sm capitalize transition-all ${
+                          item.checked
+                            ? "text-muted-foreground line-through"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {item.item}
+                      </span>
+                      <span
+                        className={`shrink-0 text-xs tabular-nums transition-all ${
+                          item.checked
+                            ? "text-muted-foreground/40"
+                            : "text-muted-foreground"
+                        }`}
+                      >
+                        {formatQuantity(item.quantity)} {item.unit}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => handleRemove(item.id)}
+                      className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-40 transition-all hover:bg-destructive/10 hover:opacity-100"
+                      aria-label={`Remove ${item.item}`}
                     >
-                      {formatQuantity(item.quantity)} {item.unit}
-                    </span>
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemove(item.id)}
-                    className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-md opacity-40 transition-all hover:bg-destructive/10 hover:opacity-100"
-                    aria-label={`Remove ${item.item}`}
-                  >
-                    <Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );

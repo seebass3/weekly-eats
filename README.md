@@ -1,36 +1,110 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Weekly Eats
 
-## Getting Started
+A self-hosted weekly dinner planner powered by local AI. Generates 5 weeknight recipes every Sunday, builds a consolidated grocery list, and lets you swap or reorder meals throughout the week.
 
-First, run the development server:
+Runs entirely on your own hardware — no cloud APIs, no subscriptions.
+
+## Features
+
+- **AI meal planning** — Generates 5 dinner recipes (2 vegetarian Mon/Wed, 3 meat Tue/Thu/Fri) using a local LLM via Ollama
+- **Grocery list** — Auto-generated from recipe ingredients with deduplication and categorization
+- **Recipe swapping** — Replace any recipe with a favorite or generate a new one with optional context (e.g. "use up lemons")
+- **Drag-and-drop reorder** — Drag recipe cards to reassign days
+- **Favorites** — Save and reuse recipes you like
+- **Real-time sync** — Changes sync across tabs/devices via SSE
+- **PWA** — Installable on mobile with offline shell support
+- **Shared access** — Password-protected, accessible over Tailscale
+
+## Tech Stack
+
+- **Next.js 16** (App Router, `use cache`, React 19)
+- **Drizzle ORM** + **PostgreSQL** for persistence
+- **Ollama** with Gemma 3 4B for local LLM inference
+- **shadcn/ui** + **Tailwind CSS v4** for UI
+- **Docker** for production deployment
+- **Bun** for package management and dev scripts
+
+## Prerequisites
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (or Docker Engine)
+- [Ollama](https://ollama.com/) with a model pulled (default: `gemma3:4b`)
+- [Bun](https://bun.sh/) (for local development and DB migrations)
+
+## Setup
+
+1. **Clone and configure:**
+
+   ```bash
+   cd weekly-eats
+   cp .env.example .env
+   ```
+
+   Fill in `.env`:
+   - `POSTGRES_PASSWORD` — any secure password
+   - `APP_PASSWORD` — password to log into the app
+   - `SESSION_SECRET` — random string for JWT signing (e.g. `openssl rand -hex 32`)
+   - `CRON_SECRET` — random string for cron endpoint auth
+
+2. **Pull the Ollama model:**
+
+   ```bash
+   ollama pull gemma3:4b
+   ```
+
+3. **Start the database and run migrations:**
+
+   ```bash
+   docker compose up -d postgres
+   bun install
+   bun run db:migrate
+   ```
+
+4. **Start the app:**
+
+   ```bash
+   # Production (Docker)
+   docker compose up -d --build
+
+   # Development
+   bun run dev
+   ```
+
+   The app is available at `http://localhost:4400` (production) or `http://localhost:4401` (dev).
+
+## Common Commands
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# Rebuild after code changes
+docker compose up -d --build app
+
+# View logs
+docker compose logs -f app
+
+# Run DB migrations
+bun run db:migrate
+
+# Open Drizzle Studio (DB browser)
+bun run db:studio
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+See [DECISIONS.md](./DECISIONS.md) for detailed architectural decisions covering LLM model choice, caching strategy, auth, real-time sync, and more.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Key directories
 
-## Learn More
+```
+src/
+  app/           # Next.js routes (meals, grocery, favorites, recipes)
+  components/    # React components (meal cards, grocery list, swap drawer, etc.)
+  hooks/         # Custom hooks (animated list)
+  lib/
+    actions.ts   # Server actions for mutations
+    db/          # Drizzle schema, queries, migrations
+    ollama/      # LLM client, prompts, generation logic
+    sync-events.ts  # SSE pub/sub for real-time sync
+```
 
-To learn more about Next.js, take a look at the following resources:
+## License
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private — personal use only.
