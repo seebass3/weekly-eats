@@ -29,7 +29,7 @@ export default async function MealsPage({
         </p>
       </div>
 
-      <WeekNav weekOf={plan?.weekOf ?? weekOf} />
+      <WeekNav weekOf={weekOf} />
 
       <MealList recipes={plan?.recipes ?? []} weekOf={weekOf} />
     </div>
