@@ -24,9 +24,9 @@ Chosen to avoid conflicts with common development ports (3000-3999, 5000-5999, 8
 
 Using `app/manifest.ts` and a manual `public/sw.js` service worker. No third-party PWA package needed — Next.js 16 has native support.
 
-## Grocery List Sync: Server-Sent Events (SSE)
+## Real-Time Sync: Unified SSE Event Bus
 
-Real-time sync between two users checking off grocery items. SSE is lighter than WebSockets and works with native `EventSource` in browsers. No extra dependencies needed.
+All mutations (grocery, meals, favorites) emit events through a single in-memory pub/sub (`src/lib/sync-events.ts`) streamed via one SSE endpoint (`/api/sync/events`). A `SyncProvider` in the root layout subscribes and calls `router.refresh()` for non-grocery events (meals, favorites), triggering RSC re-renders with fresh cached data. Grocery events are forwarded to `GroceryListView` for granular optimistic updates. The listener set uses `globalThis` to survive module reloads in dev mode. SSE chosen over WebSockets for simplicity — lighter, native `EventSource` support, no extra dependencies.
 
 ## Mutations: Server Actions with updateTag
 
@@ -68,35 +68,30 @@ To disable Funnel:
 tailscale funnel --bg --remove 4400
 ```
 
-## macOS LaunchAgent (Auto-Start)
+## Docker Containerization
 
-To ensure the app starts on boot, create `~/Library/LaunchAgents/com.weekly-eats.plist`:
+The app runs in a Docker container for production instead of bare `bun run start`. Multi-stage Dockerfile: `oven/bun:1-alpine` for dependency install and build, `node:22-alpine` for runtime (standalone output produces a Node.js server script). The container runs as a non-root `nextjs` user.
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-    <key>Label</key>
-    <string>com.weekly-eats</string>
-    <key>WorkingDirectory</key>
-    <string>/Users/cc/Developer/local-apps/weekly-eats</string>
-    <key>ProgramArguments</key>
-    <array>
-        <string>/opt/homebrew/bin/bun</string>
-        <string>run</string>
-        <string>start</string>
-    </array>
-    <key>RunAtLoad</key>
-    <true/>
-    <key>KeepAlive</key>
-    <true/>
-    <key>StandardOutPath</key>
-    <string>/tmp/weekly-eats.log</string>
-    <key>StandardErrorPath</key>
-    <string>/tmp/weekly-eats.error.log</string>
-</dict>
-</plist>
+Network topology: Postgres is reached via Docker internal DNS (`postgres:5432`), Ollama on the host via `host.docker.internal:11434`. Tailscale remains at the OS level, funneling host port 4400 which maps to container port 3000. `DATABASE_URL` is constructed in `docker-compose.yml` using the service name — not read from `.env`.
+
+The `node-cron` scheduler (bootstrapped via `instrumentation.ts`) works in standalone mode since it's bundled into `server.js`. Container timezone is set to `America/Vancouver` so the Sunday 8 AM cron fires at Pacific time.
+
+Auto-restart is handled by Docker's `restart: unless-stopped` policy — no LaunchAgent needed as long as Docker Desktop is set to start on login.
+
+```bash
+# Build and start
+docker compose up -d --build
+
+# Rebuild after code changes
+docker compose up -d --build app
+
+# Logs
+docker compose logs -f app
+
+# DB migrations (from host, where drizzle-kit is available)
+bun run db:migrate
+
+# Local dev (unchanged)
+docker compose up -d postgres
+bun run dev
 ```
-
-Then load it: `launchctl load ~/Library/LaunchAgents/com.weekly-eats.plist`

@@ -11,6 +11,43 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U weekly_eats -d weekly_eats"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      network: host
+      args:
+        DATABASE_URL: postgresql://weekly_eats:${POSTGRES_PASSWORD}@localhost:54320/weekly_eats
+    container_name: weekly-eats-app
+    restart: unless-stopped
+    ports:
+      - "4400:3000"
+    environment:
+      DATABASE_URL: postgresql://weekly_eats:${POSTGRES_PASSWORD}@postgres:5432/weekly_eats
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma3:4b}
+      APP_PASSWORD: ${APP_PASSWORD}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CRON_SECRET: ${CRON_SECRET}
+      NODE_ENV: production
+      TZ: America/Vancouver
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
 volumes:
   pgdata:
