@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ShoppingBasket } from "lucide-react";
 
 interface GroceryItem {
   id: string;
@@ -26,6 +27,17 @@ const CATEGORY_LABELS: Record<string, string> = {
   pantry: "Pantry",
   spices: "Spices",
   other: "Other",
+};
+
+const CATEGORY_EMOJI: Record<string, string> = {
+  produce: "🥬",
+  meat: "🥩",
+  dairy: "🥚",
+  bakery: "🍞",
+  frozen: "🧊",
+  pantry: "🫙",
+  spices: "🧂",
+  other: "📦",
 };
 
 export function GroceryListView({ initialItems }: GroceryListViewProps) {
@@ -65,7 +77,6 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     try {
       const res = await fetch(`/api/grocery/${id}`, { method: "PATCH" });
       if (!res.ok) {
-        // Revert on failure
         setItems((prev) =>
           prev.map((item) =>
             item.id === id ? { ...item, checked: !item.checked } : item
@@ -73,7 +84,6 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
         );
       }
     } catch {
-      // Revert on error
       setItems((prev) =>
         prev.map((item) =>
           item.id === id ? { ...item, checked: !item.checked } : item
@@ -84,6 +94,7 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
 
   const checkedCount = items.filter((i) => i.checked).length;
   const totalCount = items.length;
+  const percentage = totalCount > 0 ? Math.round((checkedCount / totalCount) * 100) : 0;
 
   // Group by category
   const grouped = items.reduce<Record<string, GroceryItem[]>>((acc, item) => {
@@ -105,48 +116,80 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>
-          {checkedCount} of {totalCount} items
-        </span>
-        <span>{Math.round((checkedCount / totalCount) * 100)}% done</span>
+    <div className="space-y-5">
+      {/* Progress card */}
+      <div className="rounded-xl bg-muted/50 p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <ShoppingBasket className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">
+              {checkedCount} of {totalCount} items
+            </span>
+          </div>
+          <span className="text-sm font-semibold tabular-nums">
+            {percentage}%
+          </span>
+        </div>
+        <div className="mt-2.5 h-2 w-full overflow-hidden rounded-full bg-background">
+          <div
+            className="h-full rounded-full bg-primary transition-all duration-500 ease-out"
+            style={{ width: `${percentage}%` }}
+          />
+        </div>
       </div>
 
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-        <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
-          style={{ width: `${(checkedCount / totalCount) * 100}%` }}
-        />
-      </div>
-
+      {/* Category groups */}
       {categoryOrder.map((category) => {
         const categoryItems = grouped[category];
         if (!categoryItems || categoryItems.length === 0) return null;
 
+        const allChecked = categoryItems.every((i) => i.checked);
+
         return (
           <div key={category}>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              {CATEGORY_LABELS[category] ?? category}
-            </h3>
-            <div className="space-y-1">
-              {categoryItems.map((item) => (
+            <div className="mb-1.5 flex items-center gap-2 px-1">
+              <span className="text-sm">{CATEGORY_EMOJI[category]}</span>
+              <h3
+                className={`text-xs font-semibold uppercase tracking-wider transition-colors ${
+                  allChecked ? "text-muted-foreground/50" : "text-muted-foreground"
+                }`}
+              >
+                {CATEGORY_LABELS[category] ?? category}
+              </h3>
+              <span className="text-[11px] text-muted-foreground/60">
+                {categoryItems.filter((i) => i.checked).length}/{categoryItems.length}
+              </span>
+            </div>
+            <div className="space-y-0.5 rounded-lg border bg-card">
+              {categoryItems.map((item, i) => (
                 <button
                   key={item.id}
                   onClick={() => handleToggle(item.id)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-accent/50 active:bg-accent ${
-                    item.checked ? "opacity-50" : ""
-                  }`}
+                  className={`flex w-full items-center gap-3 px-3 py-3 text-left transition-all active:bg-accent ${
+                    i !== categoryItems.length - 1 ? "border-b" : ""
+                  } ${item.checked ? "bg-muted/30" : "hover:bg-accent/40"}`}
                 >
-                  <Checkbox checked={item.checked} tabIndex={-1} />
+                  <Checkbox
+                    checked={item.checked}
+                    tabIndex={-1}
+                    className="transition-all"
+                  />
                   <span
-                    className={`flex-1 text-sm ${
-                      item.checked ? "line-through" : ""
+                    className={`flex-1 text-sm capitalize transition-all ${
+                      item.checked
+                        ? "text-muted-foreground line-through"
+                        : "text-foreground"
                     }`}
                   >
                     {item.item}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span
+                    className={`shrink-0 text-xs tabular-nums transition-all ${
+                      item.checked
+                        ? "text-muted-foreground/40"
+                        : "text-muted-foreground"
+                    }`}
+                  >
                     {formatQuantity(item.quantity)} {item.unit}
                   </span>
                 </button>

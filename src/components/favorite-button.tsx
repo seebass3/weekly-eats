@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Heart } from "lucide-react";
 
 interface FavoriteButtonProps {
@@ -32,16 +31,19 @@ export function FavoriteButton({ recipeId, isFavorite }: FavoriteButtonProps) {
   }
 
   return (
-    <Button
-      variant={favorite ? "default" : "outline"}
-      size="sm"
+    <button
       onClick={handleToggle}
       disabled={isLoading}
+      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-all hover:bg-accent active:scale-90 disabled:opacity-50"
+      aria-label={favorite ? "Remove from favorites" : "Save to favorites"}
     >
       <Heart
-        className={`mr-2 h-4 w-4 ${favorite ? "fill-current" : ""}`}
+        className={`h-5 w-5 transition-colors ${
+          favorite
+            ? "fill-red-500 text-red-500"
+            : "text-muted-foreground hover:text-foreground"
+        }`}
       />
-      {favorite ? "Saved to Favorites" : "Save to Favorites"}
-    </Button>
+    </button>
   );
 }

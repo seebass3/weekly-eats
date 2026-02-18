@@ -1,15 +1,23 @@
 import { getFavorites } from "@/lib/db/queries";
 import { MealCard } from "@/components/meal-card";
+import { Heart } from "lucide-react";
 
 export default async function FavoritesPage() {
   const favorites = await getFavorites();
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">Favorites</h1>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">Favorites</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          {favorites.length > 0
+            ? `${favorites.length} saved recipe${favorites.length === 1 ? "" : "s"}`
+            : "Your saved recipes will appear here"}
+        </p>
+      </div>
 
       {favorites.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {favorites.map((recipe) => (
             <MealCard
               key={recipe.id}
@@ -24,9 +32,17 @@ export default async function FavoritesPage() {
           ))}
         </div>
       ) : (
-        <p className="py-12 text-center text-muted-foreground">
-          Save recipes you love and they&apos;ll show up here.
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <Heart className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-medium">No favorites yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tap the heart on any recipe to save it here
+            </p>
+          </div>
+        </div>
       )}
     </div>
   );

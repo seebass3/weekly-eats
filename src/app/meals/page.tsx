@@ -2,6 +2,7 @@ import { getMealPlanByWeek, getMostRecentMealPlan } from "@/lib/db/queries";
 import { MealCard } from "@/components/meal-card";
 import { WeekNav } from "@/components/week-nav";
 import { GenerateButton } from "@/components/generate-button";
+import { UtensilsCrossed } from "lucide-react";
 
 function getCurrentWeekMonday(): string {
   const now = new Date();
@@ -28,14 +29,20 @@ export default async function MealsPage({
   }
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold tracking-tight">
-        This Week&apos;s Dinners
-      </h1>
+    <div className="space-y-5">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight">
+          This Week&apos;s Dinners
+        </h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          5 weeknight recipes, freshly generated
+        </p>
+      </div>
+
       <WeekNav weekOf={plan?.weekOf ?? weekOf} />
 
       {plan && plan.recipes.length > 0 ? (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {plan.recipes.map((recipe) => (
             <MealCard
               key={recipe.id}
@@ -50,11 +57,19 @@ export default async function MealsPage({
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-4 py-12 text-center">
-          <p className="text-muted-foreground">
-            No meal plan for this week yet.
-          </p>
-          <GenerateButton weekOf={weekOf} />
+        <div className="flex flex-col items-center gap-5 rounded-xl border border-dashed py-16 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+            <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-medium">No meal plan yet</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Generate one and we&apos;ll plan your dinners for the week
+            </p>
+          </div>
+          <div className="w-full max-w-xs px-4">
+            <GenerateButton weekOf={weekOf} />
+          </div>
         </div>
       )}
     </div>

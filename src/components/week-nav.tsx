@@ -37,23 +37,27 @@ export function WeekNav({ weekOf }: WeekNavProps) {
   const router = useRouter();
 
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-1 py-1">
       <Button
         variant="ghost"
         size="icon"
+        className="h-8 w-8"
         onClick={() => router.push(`/meals?week=${shiftWeek(weekOf, -7)}`)}
         aria-label="Previous week"
       >
-        <ChevronLeft className="h-5 w-5" />
+        <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="text-sm font-medium">{formatWeekLabel(weekOf)}</span>
+      <span className="text-sm font-medium tracking-tight">
+        {formatWeekLabel(weekOf)}
+      </span>
       <Button
         variant="ghost"
         size="icon"
+        className="h-8 w-8"
         onClick={() => router.push(`/meals?week=${shiftWeek(weekOf, 7)}`)}
         aria-label="Next week"
       >
-        <ChevronRight className="h-5 w-5" />
+        <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
   );
