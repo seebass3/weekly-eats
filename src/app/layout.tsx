@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { BottomNav } from "@/components/bottom-nav";
+import { ServiceWorkerRegister } from "@/components/sw-register";
+import { InstallPrompt } from "@/components/install-prompt";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -11,6 +13,11 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "Weekly Eats",
   description: "Your weekly dinner plan, powered by local AI",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Weekly Eats",
+  },
 };
 
 export const viewport: Viewport = {
@@ -33,6 +40,8 @@ export default function RootLayout({
           {children}
         </main>
         <BottomNav />
+        <InstallPrompt />
+        <ServiceWorkerRegister />
       </body>
     </html>
   );
