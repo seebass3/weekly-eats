@@ -46,7 +46,7 @@ export default function LoginPage() {
           <UtensilsCrossed className="h-7 w-7 text-primary-foreground" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Weekly Eats</h1>
+          <h1 className="font-serif text-2xl font-bold tracking-tight">Weekly Eats</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Enter the password to continue
           </p>

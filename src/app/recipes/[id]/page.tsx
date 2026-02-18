@@ -30,7 +30,7 @@ export default async function RecipePage({
 
       <div>
         <div className="flex items-start justify-between gap-3">
-          <h1 className="text-2xl font-bold leading-tight tracking-tight">
+          <h1 className="font-serif text-2xl font-bold leading-tight tracking-tight">
             {recipe.name}
           </h1>
           <FavoriteButton recipeId={recipe.id} isFavorite={recipe.isFavorite} />
@@ -52,20 +52,20 @@ export default async function RecipePage({
         </div>
 
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="flex flex-col items-center rounded-lg bg-muted/60 px-3 py-2.5">
-            <Clock className="mb-1 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col items-center rounded-lg bg-primary/5 px-3 py-2.5">
+            <Clock className="mb-1 h-4 w-4 text-primary/70" />
             <span className="text-sm font-semibold">{totalTime}m</span>
             <span className="text-[11px] text-muted-foreground">total</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/60 px-3 py-2.5">
-            <Flame className="mb-1 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col items-center rounded-lg bg-primary/5 px-3 py-2.5">
+            <Flame className="mb-1 h-4 w-4 text-primary/70" />
             <span className="text-sm font-semibold">
               {recipe.cookTimeMinutes}m
             </span>
             <span className="text-[11px] text-muted-foreground">cook</span>
           </div>
-          <div className="flex flex-col items-center rounded-lg bg-muted/60 px-3 py-2.5">
-            <Users className="mb-1 h-4 w-4 text-muted-foreground" />
+          <div className="flex flex-col items-center rounded-lg bg-primary/5 px-3 py-2.5">
+            <Users className="mb-1 h-4 w-4 text-primary/70" />
             <span className="text-sm font-semibold">{recipe.servings}</span>
             <span className="text-[11px] text-muted-foreground">servings</span>
           </div>

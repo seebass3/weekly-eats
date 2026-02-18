@@ -1,19 +1,17 @@
-import { subscribeToGroceryEvents } from "@/lib/grocery-events";
+import { subscribeToSyncEvents } from "@/lib/sync-events";
 
 export async function GET() {
   const encoder = new TextEncoder();
 
   const stream = new ReadableStream({
     start(controller) {
-      // Send initial keepalive
       controller.enqueue(encoder.encode(": keepalive\n\n"));
 
-      const unsubscribe = subscribeToGroceryEvents((event) => {
+      const unsubscribe = subscribeToSyncEvents((event) => {
         const data = `data: ${JSON.stringify(event)}\n\n`;
         try {
           controller.enqueue(encoder.encode(data));
         } catch {
-          // Client disconnected
           unsubscribe();
         }
       });
@@ -28,7 +26,7 @@ export async function GET() {
         }
       }, 30_000);
 
-      // Cleanup on close
+      // Detect disconnected clients
       const checkClosed = setInterval(() => {
         try {
           controller.enqueue(encoder.encode(""));

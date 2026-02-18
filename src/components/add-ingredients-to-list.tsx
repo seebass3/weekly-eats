@@ -71,7 +71,7 @@ export function AddIngredientsToList({
   }, [selected, ingredients]);
 
   return (
-    <div className="rounded-xl bg-muted/40 p-4">
+    <div className="rounded-xl bg-primary/[0.04] p-4">
       <div className="mb-3 flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
           Ingredients
@@ -93,7 +93,7 @@ export function AddIngredientsToList({
               onClick={() => toggleItem(i)}
               onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleItem(i); } }}
               className={`flex w-full cursor-pointer items-center gap-3 rounded-lg px-2 py-2 text-left transition-colors ${
-                selected.has(i) ? "bg-primary/5" : "hover:bg-accent/40"
+                selected.has(i) ? "bg-primary/[0.08]" : "hover:bg-accent/40"
               }`}
             >
               <Checkbox

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { regenerateSingleRecipe } from "@/lib/ollama/generate-plan";
+import { emitSyncEvent } from "@/lib/sync-events";
 
 export const maxDuration = 120;
 
@@ -21,7 +22,7 @@ export async function POST(
 
     revalidateTag("meals", { expire: 0 });
     revalidateTag(`recipe-${id}`, { expire: 0 });
-    revalidateTag("grocery", { expire: 0 });
+    emitSyncEvent({ type: "meals:updated" });
 
     return NextResponse.json({
       message: "Recipe regenerated successfully",

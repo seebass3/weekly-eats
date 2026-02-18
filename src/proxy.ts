@@ -31,10 +31,16 @@ export async function proxy(request: NextRequest) {
 
   try {
     await jwtVerify(token, SESSION_SECRET);
-    return NextResponse.next();
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));
   }
+
+  // Redirect root to /meals at the proxy level to avoid page-level flash
+  if (pathname === "/") {
+    return NextResponse.redirect(new URL("/meals", request.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

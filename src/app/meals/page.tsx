@@ -1,4 +1,8 @@
-import { getMealPlanByWeek, getMostRecentMealPlan } from "@/lib/db/queries";
+import {
+  getMealPlanByWeek,
+  getMostRecentMealPlan,
+  getFavorites,
+} from "@/lib/db/queries";
 import { WeekNav } from "@/components/week-nav";
 import { MealList } from "@/components/meal-list";
 import { getCurrentWeekMonday } from "@/lib/dates";
@@ -11,17 +15,22 @@ export default async function MealsPage({
   const { week } = await searchParams;
   const weekOf = week ?? getCurrentWeekMonday();
 
-  let plan = await getMealPlanByWeek(weekOf);
+  const [plan, favorites] = await Promise.all([
+    getMealPlanByWeek(weekOf),
+    getFavorites(),
+  ]);
+
+  let activePlan = plan;
 
   // If no plan for current week, show most recent
-  if (!plan && !week) {
-    plan = await getMostRecentMealPlan();
+  if (!activePlan && !week) {
+    activePlan = await getMostRecentMealPlan();
   }
 
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">
+        <h1 className="font-serif text-2xl font-bold tracking-tight">
           This Week&apos;s Dinners
         </h1>
         <p className="mt-0.5 text-sm text-muted-foreground">
@@ -31,7 +40,11 @@ export default async function MealsPage({
 
       <WeekNav weekOf={weekOf} />
 
-      <MealList recipes={plan?.recipes ?? []} weekOf={weekOf} />
+      <MealList
+        recipes={activePlan?.recipes ?? []}
+        weekOf={weekOf}
+        favorites={favorites}
+      />
     </div>
   );
 }

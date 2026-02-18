@@ -11,6 +11,8 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { useGeneration } from "@/components/generation-provider";
+import { useDialog } from "@/components/dialog-provider";
+import { emitGenerationStart, emitGenerationEnd } from "@/lib/actions";
 
 interface GenerateButtonProps {
   weekOf?: string;
@@ -19,6 +21,7 @@ interface GenerateButtonProps {
 
 export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
   const { generatingWeekOf, startGeneration, endGeneration } = useGeneration();
+  const { alert } = useDialog();
   const [showContext, setShowContext] = useState(false);
   const [context, setContext] = useState("");
   const router = useRouter();
@@ -28,6 +31,7 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
   async function handleGenerate() {
     if (!weekOf) return;
     startGeneration(weekOf);
+    emitGenerationStart(weekOf);
 
     try {
       const body: Record<string, unknown> = { weekOf };
@@ -51,11 +55,13 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
       router.refresh();
     } catch (error) {
       console.error("Generation failed:", error);
-      alert(
-        `Failed to generate: ${error instanceof Error ? error.message : "Unknown error"}`
-      );
+      await alert({
+        title: "Generation failed",
+        description: error instanceof Error ? error.message : "Something went wrong. Please try again.",
+      });
     } finally {
       endGeneration();
+      emitGenerationEnd();
     }
   }
 
@@ -83,7 +89,7 @@ export function GenerateButton({ weekOf, isRegenerate }: GenerateButtonProps) {
             {isRegenerate ? (
               <RefreshCw className="mr-2 h-4 w-4" />
             ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
+              <Sparkles className="mr-2 h-4 w-4 animate-[sparkle-shimmer_2s_ease-in-out_infinite]" />
             )}
             {isRegenerate ? "Regenerate Week" : "Generate Meal Plan"}
           </>

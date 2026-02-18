@@ -1,10 +1,5 @@
 import { db } from "@/lib/db";
-import {
-  mealPlans,
-  recipes,
-  savedRecipes,
-  groceryLists,
-} from "@/lib/db/schema";
+import { mealPlans, recipes, savedRecipes } from "@/lib/db/schema";
 import { desc, eq, gte, sql } from "drizzle-orm";
 import { generateJSON } from "./client";
 import {
@@ -17,7 +12,6 @@ import {
   WeekPlanSchema,
   type GeneratedRecipe,
 } from "./schema";
-import { generateGroceryList } from "./generate-grocery";
 import { getNextMonday } from "@/lib/dates";
 
 async function getRecentRecipeNames(weeksBack: number): Promise<string[]> {
@@ -145,9 +139,6 @@ export async function generateWeeklyPlan(options?: {
     )
     .returning();
 
-  // Generate grocery list from the recipes
-  await generateGroceryList(mealPlan.id, targetWeek, insertedRecipes);
-
   return { mealPlanId: mealPlan.id, alreadyExisted: false, insertedRecipes };
 }
 
@@ -232,19 +223,6 @@ export async function regenerateSingleRecipe(
     })
     .where(eq(recipes.id, recipeId))
     .returning();
-
-  // Regenerate the grocery list for this week
-  const allRecipes = await db
-    .select()
-    .from(recipes)
-    .where(eq(recipes.mealPlanId, plan.id));
-
-  // Delete existing grocery list for this plan (cascade deletes items)
-  await db
-    .delete(groceryLists)
-    .where(eq(groceryLists.mealPlanId, plan.id));
-
-  await generateGroceryList(plan.id, plan.weekOf, allRecipes);
 
   return updated;
 }

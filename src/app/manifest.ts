@@ -7,8 +7,8 @@ export default function manifest(): MetadataRoute.Manifest {
     description: "Your weekly dinner plan, powered by local AI",
     start_url: "/meals",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#18181b",
+    background_color: "#f9f5f0",
+    theme_color: "#2c2418",
     icons: [
       {
         src: "/icons/icon-192.png",

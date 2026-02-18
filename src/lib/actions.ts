@@ -1,6 +1,9 @@
 "use server";
 
 import { updateTag } from "next/cache";
+import { db } from "@/lib/db";
+import { recipes, savedRecipes } from "@/lib/db/schema";
+import { eq } from "drizzle-orm";
 import {
   toggleGroceryItem,
   removeGroceryItem,
@@ -10,14 +13,14 @@ import {
   getGroceryListForWeek,
   toggleFavorite,
 } from "@/lib/db/queries";
-import { emitGroceryEvent } from "@/lib/grocery-events";
+import { emitSyncEvent } from "@/lib/sync-events";
 
 export async function toggleGroceryItemAction(id: string) {
   const updated = await toggleGroceryItem(id);
   if (!updated) return { error: "Item not found" as const };
 
-  emitGroceryEvent({
-    type: "toggle",
+  emitSyncEvent({
+    type: "grocery:toggle",
     itemId: updated.id,
     checked: updated.checked,
   });
@@ -30,7 +33,7 @@ export async function removeGroceryItemAction(id: string) {
   const deleted = await removeGroceryItem(id);
   if (!deleted) return { error: "Item not found" as const };
 
-  emitGroceryEvent({ type: "remove", itemId: deleted.id });
+  emitSyncEvent({ type: "grocery:remove", itemId: deleted.id });
 
   updateTag("grocery");
   return { success: true as const };
@@ -42,7 +45,7 @@ export async function clearGroceryListAction(weekOf?: string) {
 
   const cleared = await clearGroceryList(groceryList.id);
 
-  emitGroceryEvent({ type: "clear" });
+  emitSyncEvent({ type: "grocery:clear" });
 
   updateTag("grocery");
   return { cleared };
@@ -61,15 +64,90 @@ export async function addGroceryItemsAction(
   );
 
   if (inserted.length > 0) {
-    emitGroceryEvent({ type: "add", items: inserted });
+    emitSyncEvent({ type: "grocery:add", items: inserted });
   }
 
   updateTag("grocery");
   return { added: inserted.length, merged: mergedCount };
 }
 
+export async function emitGenerationStart(weekOf: string) {
+  emitSyncEvent({ type: "generation:start", weekOf });
+}
+
+export async function emitGenerationEnd() {
+  emitSyncEvent({ type: "generation:end" });
+}
+
+export async function emitSwapStart(recipeId: string) {
+  emitSyncEvent({ type: "swap:start", recipeId });
+}
+
+export async function emitSwapEnd(recipeId: string) {
+  emitSyncEvent({ type: "swap:end", recipeId });
+}
+
+export async function replaceWithFavoriteAction(
+  recipeId: string,
+  favoriteRecipeId: string
+) {
+  // Fetch the favorite recipe's full data
+  const [source] = await db
+    .select()
+    .from(recipes)
+    .where(eq(recipes.id, favoriteRecipeId))
+    .limit(1);
+
+  if (!source) return { error: "Favorite recipe not found" as const };
+
+  // Copy fields into the target recipe (keeps same id + mealPlanId)
+  const [updated] = await db
+    .update(recipes)
+    .set({
+      name: source.name,
+      cuisine: source.cuisine,
+      cookTimeMinutes: source.cookTimeMinutes,
+      prepTimeMinutes: source.prepTimeMinutes,
+      servings: source.servings,
+      description: source.description,
+      ingredients: source.ingredients,
+      steps: source.steps,
+      tags: source.tags,
+      source: "favorite",
+    })
+    .where(eq(recipes.id, recipeId))
+    .returning();
+
+  if (!updated) return { error: "Target recipe not found" as const };
+
+  // Track usage on the saved recipe
+  const [saved] = await db
+    .select()
+    .from(savedRecipes)
+    .where(eq(savedRecipes.recipeId, favoriteRecipeId))
+    .limit(1);
+
+  if (saved) {
+    await db
+      .update(savedRecipes)
+      .set({
+        timesUsed: saved.timesUsed + 1,
+        lastUsedAt: new Date(),
+      })
+      .where(eq(savedRecipes.id, saved.id));
+  }
+
+  emitSyncEvent({ type: "meals:updated" });
+  updateTag("meals");
+  updateTag(`recipe-${recipeId}`);
+
+  return { success: true as const, recipe: updated };
+}
+
 export async function toggleFavoriteAction(recipeId: string) {
   const result = await toggleFavorite(recipeId);
+
+  emitSyncEvent({ type: "favorites:updated" });
 
   updateTag("favorites");
   updateTag(`recipe-${recipeId}`);

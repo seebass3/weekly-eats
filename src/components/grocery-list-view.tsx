@@ -8,7 +8,8 @@ import {
   removeGroceryItemAction,
   clearGroceryListAction,
 } from "@/lib/actions";
-import type { GroceryItemPayload } from "@/lib/grocery-events";
+import { useDialog } from "@/components/dialog-provider";
+import { useSyncGrocery } from "@/components/sync-provider";
 
 interface GroceryItem {
   id: string;
@@ -49,42 +50,31 @@ const CATEGORY_EMOJI: Record<string, string> = {
 export function GroceryListView({ initialItems }: GroceryListViewProps) {
   const [items, setItems] = useState(initialItems);
   const removedItemRef = useRef<GroceryItem | null>(null);
+  const { confirm } = useDialog();
 
   // Sync from server when cached data is revalidated
   useEffect(() => {
     setItems(initialItems);
   }, [initialItems]);
 
-  // SSE subscription for real-time cross-tab updates
-  useEffect(() => {
-    const eventSource = new EventSource("/api/grocery/events");
-
-    eventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data) as
-        | { type: "toggle"; itemId: string; checked: boolean }
-        | { type: "add"; items: GroceryItemPayload[] }
-        | { type: "remove"; itemId: string }
-        | { type: "clear" };
-
-      if (data.type === "toggle") {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === data.itemId
-              ? { ...item, checked: data.checked }
-              : item
-          )
-        );
-      } else if (data.type === "add") {
-        setItems((prev) => [...prev, ...data.items]);
-      } else if (data.type === "remove") {
-        setItems((prev) => prev.filter((item) => item.id !== data.itemId));
-      } else if (data.type === "clear") {
-        setItems([]);
-      }
-    };
-
-    return () => eventSource.close();
-  }, []);
+  // Real-time cross-tab/cross-user updates via shared SyncProvider
+  useSyncGrocery((event) => {
+    if (event.type === "grocery:toggle") {
+      setItems((prev) =>
+        prev.map((item) =>
+          item.id === event.itemId
+            ? { ...item, checked: event.checked }
+            : item
+        )
+      );
+    } else if (event.type === "grocery:add") {
+      setItems((prev) => [...prev, ...event.items]);
+    } else if (event.type === "grocery:remove") {
+      setItems((prev) => prev.filter((item) => item.id !== event.itemId));
+    } else if (event.type === "grocery:clear") {
+      setItems([]);
+    }
+  });
 
   const handleToggle = useCallback(async (id: string) => {
     setItems((prev) =>
@@ -120,7 +110,13 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   }, [items]);
 
   const handleClear = useCallback(async () => {
-    if (!window.confirm("Clear all items from the grocery list?")) return;
+    const confirmed = await confirm({
+      title: "Clear grocery list",
+      description: "This will remove all items from your grocery list. This can't be undone.",
+      confirmLabel: "Clear all",
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     const previousItems = items;
     setItems([]);
@@ -129,7 +125,8 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
     if ("error" in result) {
       setItems(previousItems);
     }
-  }, [items]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items, confirm]);
 
   const checkedCount = items.filter((i) => i.checked).length;
   const totalCount = items.length;
@@ -162,7 +159,7 @@ export function GroceryListView({ initialItems }: GroceryListViewProps) {
   return (
     <div className="space-y-5">
       {/* Progress card */}
-      <div className="rounded-xl bg-muted/50 p-4">
+      <div className="rounded-xl bg-primary/5 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <ShoppingBasket className="h-4 w-4 text-muted-foreground" />

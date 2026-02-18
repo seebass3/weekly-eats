@@ -15,14 +15,26 @@ interface Recipe {
   description: string | null;
 }
 
+interface FavoriteRecipe {
+  id: string;
+  name: string;
+  cuisine: string;
+  cookTimeMinutes: number;
+  prepTimeMinutes: number | null;
+  description: string | null;
+}
+
 interface MealListProps {
   recipes: Recipe[];
   weekOf: string;
+  favorites?: FavoriteRecipe[];
 }
 
-export function MealList({ recipes, weekOf }: MealListProps) {
+export function MealList({ recipes, weekOf, favorites = [] }: MealListProps) {
   const { generatingWeekOf } = useGeneration();
   const isGenerating = generatingWeekOf === weekOf;
+
+  const hasRecipes = recipes.length > 0;
 
   if (isGenerating) {
     return (
@@ -33,7 +45,7 @@ export function MealList({ recipes, weekOf }: MealListProps) {
           ))}
         </div>
         <div className="px-4">
-          <GenerateButton weekOf={weekOf} isRegenerate />
+          <GenerateButton weekOf={weekOf} isRegenerate={hasRecipes} />
         </div>
       </>
     );
@@ -54,6 +66,7 @@ export function MealList({ recipes, weekOf }: MealListProps) {
               prepTimeMinutes={recipe.prepTimeMinutes}
               description={recipe.description}
               canSwap
+              favorites={favorites}
             />
           ))}
         </div>
@@ -66,8 +79,8 @@ export function MealList({ recipes, weekOf }: MealListProps) {
 
   return (
     <div className="flex flex-col items-center gap-5 rounded-xl border border-dashed py-16 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-        <UtensilsCrossed className="h-6 w-6 text-muted-foreground" />
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+        <UtensilsCrossed className="h-6 w-6 text-primary/60" />
       </div>
       <div>
         <p className="font-medium">No meal plan yet</p>

@@ -40,7 +40,7 @@ export function WeekNav({ weekOf }: WeekNavProps) {
   const router = useRouter();
 
   return (
-    <div className="flex items-center justify-between rounded-lg bg-muted/50 px-1 py-1">
+    <div className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/60 px-1 py-1">
       <Button
         variant="ghost"
         size="icon"
@@ -50,7 +50,7 @@ export function WeekNav({ weekOf }: WeekNavProps) {
       >
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="text-sm font-medium tracking-tight">
+      <span className="text-sm font-medium tabular-nums tracking-tight">
         {formatWeekLabel(weekOf)}
       </span>
       <Button
