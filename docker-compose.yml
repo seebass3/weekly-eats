@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: weekly-eats-db
+    restart: unless-stopped
+    ports:
+      - "54320:5432"
+    environment:
+      POSTGRES_DB: weekly_eats
+      POSTGRES_USER: weekly_eats
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
